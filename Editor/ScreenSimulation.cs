@@ -11,7 +11,6 @@ namespace Unity.DeviceSimulator
         private ScreenData m_Screen;
 
         private IInputProvider m_InputProvider;
-        private ISimulatorWindow m_Window;
 
         private bool m_AutoRotation;
         public bool AutoRotation => m_AutoRotation;
@@ -33,18 +32,27 @@ namespace Unity.DeviceSimulator
         public int Height => m_CurrentHeight;
 
         private bool m_IsFullScreen;
+        public Vector4 Insets { get; private set; }
+
+        public Rect ScreenSpaceSafeArea { get; private set; }
 
         public bool IsRenderingLandscape => SimulatorUtilities.IsLandscape(m_RenderedOrientation);
 
-        public Action<bool> OnOrientationChanged  { get; set; }
-        public Action OnAllowedOrientationChanged { get; set; }
-        public Action<int, int> OnResolutionChanged { get; set; }
-        public Action<bool> OnFullScreenChanged { get; set; }
+        public event Action<bool> OnOrientationChanged;
+        public event Action OnAllowedOrientationChanged;
+        public event Action<int, int> OnResolutionChanged;
+        public event Action<bool> OnFullScreenChanged;
+        public event Action<Vector4> OnInsetsChanged;
+        public event Action<Rect> OnScreenSpaceSafeAreaChanged;
 
-        public ScreenSimulation(DeviceInfo device, IInputProvider inputProvider, SimulationPlayerSettings playerSettings, ISimulatorWindow window)
+        public ScreenSimulation(DeviceInfo device, IInputProvider inputProvider, SimulationPlayerSettings playerSettings)
         {
-            this.m_DeviceInfo = device;
+            m_DeviceInfo = device;
             m_Screen = device.Screens[0];
+
+            m_InputProvider = inputProvider;
+            m_InputProvider.OnRotation += Rotate;
+            m_InputProvider.OnTouchEvent += HandleTouch;
 
             m_SupportedOrientations = new Dictionary<ScreenOrientation, OrientationData>();
             foreach (var o in m_Screen.orientations)
@@ -52,17 +60,14 @@ namespace Unity.DeviceSimulator
                 m_SupportedOrientations.Add(o.orientation, o);
             }
 
-            m_Window = window;
-
-            m_InputProvider = inputProvider;
-            m_InputProvider.OnRotation += Rotate;
-            m_InputProvider.OnTouchEvent += HandleTouch;
-
             m_AllowedAutoRotation = new Dictionary<ScreenOrientation, bool>();
             m_AllowedAutoRotation.Add(ScreenOrientation.Portrait, playerSettings.allowedPortrait);
             m_AllowedAutoRotation.Add(ScreenOrientation.PortraitUpsideDown, playerSettings.allowedPortraitUpsideDown);
             m_AllowedAutoRotation.Add(ScreenOrientation.LandscapeLeft, playerSettings.allowedLandscapeLeft);
             m_AllowedAutoRotation.Add(ScreenOrientation.LandscapeRight, playerSettings.allowedLandscapeRight);
+
+            // Set the full screen mode.
+            m_IsFullScreen = !m_DeviceInfo.IsAndroidDevice() || playerSettings.androidStartInFullscreen;
 
             // Calculate the right orientation.
             var settingOrientation = SimulatorUtilities.ToScreenOrientation(playerSettings.defaultOrientation);
@@ -99,26 +104,27 @@ namespace Unity.DeviceSimulator
             m_CurrentWidth = IsRenderingLandscape ? initHeight : initWidth;
             m_CurrentHeight = IsRenderingLandscape ? initWidth : initHeight;
 
-            // Set the full screen mode.
-            m_IsFullScreen = !m_DeviceInfo.IsAndroidDevice() || playerSettings.androidStartInFullscreen;
             if (!m_IsFullScreen)
+            {
                 CalculateScreenResolutionForScreenMode(out m_CurrentWidth, out m_CurrentHeight);
-
+                CalculateInsets();
+            }
             CalculateSafeAreaAndCutouts();
-
-            m_Window.TargetOrientation = m_RenderedOrientation;
-            m_Window.TargetSize = new Vector2(m_CurrentWidth, m_CurrentHeight);
 
             ShimManager.UseShim(this);
         }
 
         private void Rotate(Quaternion rotation)
         {
-            if (m_AutoRotation)
+            if (!m_AutoRotation) return;
+
+            var newOrientation = SimulatorUtilities.RotationToScreenOrientation(rotation);
+            if (newOrientation != m_RenderedOrientation && m_SupportedOrientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
             {
-                var newOrientation = SimulatorUtilities.RotationToScreenOrientation(rotation);
-                if (m_SupportedOrientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
-                    ForceNewOrientation(newOrientation);
+                ForceNewOrientation(newOrientation);
+            }
+            else
+            {
                 OnOrientationChanged?.Invoke(m_AutoRotation);
             }
         }
@@ -132,16 +138,60 @@ namespace Unity.DeviceSimulator
                 var temp = m_CurrentHeight;
                 m_CurrentHeight = m_CurrentWidth;
                 m_CurrentWidth = temp;
-                m_Window.TargetSize = new Vector2(m_CurrentWidth, m_CurrentHeight);
                 OnResolutionChanged?.Invoke(m_CurrentWidth, m_CurrentHeight);
             }
             m_RenderedOrientation = orientation;
-            m_Window.TargetOrientation = orientation;
+            OnOrientationChanged?.Invoke(m_AutoRotation);
+            CalculateInsets();
             CalculateSafeAreaAndCutouts();
         }
 
         private void CalculateSafeAreaAndCutouts()
         {
+            var safeArea = m_SupportedOrientations[m_RenderedOrientation].safeArea;
+            Rect onScreenSafeArea = new Rect();
+
+            // Calculating where on the screen to draw safe area
+            onScreenSafeArea = safeArea;
+            switch (m_RenderedOrientation)
+            {
+                case ScreenOrientation.Portrait:
+                    onScreenSafeArea.y = m_Screen.height - safeArea.height - safeArea.y;
+                    break;
+                case ScreenOrientation.PortraitUpsideDown:
+                    break;
+                case ScreenOrientation.LandscapeLeft:
+                    onScreenSafeArea.y = safeArea.x;
+                    onScreenSafeArea.x = safeArea.y;
+                    onScreenSafeArea.height = safeArea.width;
+                    onScreenSafeArea.width = safeArea.height;
+                    break;
+                case ScreenOrientation.LandscapeRight:
+                    onScreenSafeArea.y = m_Screen.height - safeArea.width - safeArea.x;
+                    onScreenSafeArea.x = m_Screen.width - safeArea.height - safeArea.y;
+                    onScreenSafeArea.width = safeArea.height;
+                    onScreenSafeArea.height = safeArea.width;
+                    break;
+            }
+
+            if (!m_IsFullScreen)
+            {
+                switch (m_RenderedOrientation)
+                {
+                    case ScreenOrientation.PortraitUpsideDown:
+                        onScreenSafeArea.yMin += m_Screen.navigationBarHeight;
+                        break;
+                    case ScreenOrientation.LandscapeLeft:
+                    case ScreenOrientation.LandscapeRight:
+                    case ScreenOrientation.Portrait:
+                        onScreenSafeArea.yMax -= m_Screen.navigationBarHeight;
+                        break;
+                }
+            }
+
+            ScreenSpaceSafeArea = onScreenSafeArea;
+            OnScreenSpaceSafeAreaChanged?.Invoke(ScreenSpaceSafeArea);
+
             int scaledHeight = 0;
             var scaledNavigationBarHeight = Mathf.RoundToInt(m_DpiRatio * m_Screen.navigationBarHeight);
             if (!m_WasResolutionSet)
@@ -214,6 +264,32 @@ namespace Unity.DeviceSimulator
             }
             else
                 m_CurrentCutouts = new Rect[0];
+        }
+
+        // Insets are parts of the screen that are outside of unity rendering area, like navigation bar in windowed mode. Insets are only possible on Android at the moment.
+        private void CalculateInsets()
+        {
+            if (!m_DeviceInfo.IsAndroidDevice())
+                return;
+
+            var inset = Vector4.zero;
+            if (!m_IsFullScreen)
+            {
+                switch (m_RenderedOrientation)
+                {
+                    case ScreenOrientation.Portrait:
+                    case ScreenOrientation.LandscapeLeft:
+                    case ScreenOrientation.LandscapeRight:
+                        inset = new Vector4(0, m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height, 0, m_Screen.navigationBarHeight);
+                        break;
+                    case ScreenOrientation.PortraitUpsideDown:
+                        var topInset = m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height + m_Screen.navigationBarHeight;
+                        inset = new Vector4(0, topInset, 0, 0);
+                        break;
+                }
+            }
+            Insets = inset;
+            OnInsetsChanged?.Invoke(inset);
         }
 
         private void HandleTouch(TouchEvent evt)
@@ -330,7 +406,6 @@ namespace Unity.DeviceSimulator
         {
             m_CurrentWidth = width;
             m_CurrentHeight = height;
-            m_Window.TargetSize = new Vector2(width, height);
             CalculateSafeAreaAndCutouts();
 
             OnResolutionChanged?.Invoke(m_CurrentWidth, m_CurrentHeight);
@@ -341,9 +416,10 @@ namespace Unity.DeviceSimulator
             width = m_CurrentWidth;
             height = m_CurrentHeight;
 
-            var noFullScreenHeight = m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height - m_Screen.navigationBarHeight;
-            float scale = m_IsFullScreen ? m_Screen.height / noFullScreenHeight : noFullScreenHeight / m_Screen.height;
 
+            var portraitSafeArea = m_SupportedOrientations[ScreenOrientation.Portrait].safeArea;
+            var noFullScreenHeight = portraitSafeArea.height + portraitSafeArea.y - m_Screen.navigationBarHeight;
+            var scale = m_IsFullScreen ? m_Screen.height / noFullScreenHeight : noFullScreenHeight / m_Screen.height;
             switch (m_RenderedOrientation)
             {
                 case ScreenOrientation.Portrait:
@@ -371,6 +447,7 @@ namespace Unity.DeviceSimulator
         {
             m_InputProvider.OnRotation -= Rotate;
             m_InputProvider.OnTouchEvent -= HandleTouch;
+
             Disable();
         }
 
@@ -400,8 +477,6 @@ namespace Unity.DeviceSimulator
                     m_AutoRotation = false;
                     ForceNewOrientation(value);
                 }
-
-                OnOrientationChanged?.Invoke(m_AutoRotation);
             }
         }
 
@@ -445,6 +520,7 @@ namespace Unity.DeviceSimulator
                     return;
 
                 m_IsFullScreen = value;
+                CalculateInsets();
 
                 // We only change the resolution if we never set the resolution by calling Screen.SetResolution().
                 if (!m_WasResolutionSet)

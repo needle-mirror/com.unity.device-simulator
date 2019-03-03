@@ -111,7 +111,7 @@ namespace Unity.DeviceSimulator
             {
                 root = XElement.Load(jsonReader);
             }
-            catch (XmlException e)
+            catch (XmlException)
             {
                 errorsBuilder.AppendLine("Not a valid JSON.");
                 errors = errorsBuilder.ToString();

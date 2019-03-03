@@ -7,16 +7,13 @@ namespace Unity.DeviceSimulator
 {
     internal class SimulatorApplicationSettingsUI
     {
-        private VisualElement m_RootElement = null;
+        internal Foldout m_RootElement = null;
 
         private ApplicationSimulation m_ApplicationSimulation = null;
 
-        public SimulatorApplicationSettingsUI(VisualElement rootElement, ApplicationSimulation applicationSimulation)
+        public SimulatorApplicationSettingsUI(Foldout rootElement, ApplicationSimulation applicationSimulation)
         {
-            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/ui_application_settings.uxml");
-            visualTree.CloneTree(rootElement);
-            m_RootElement = rootElement.Q<Foldout>("application-settings");
-
+            m_RootElement = rootElement;
             m_ApplicationSimulation = applicationSimulation;
 
             InitUI();

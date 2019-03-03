@@ -22,28 +22,22 @@ namespace Unity.DeviceSimulator
         void OnExtendDeviceSimulator(VisualElement visualElement);
     }
 
-    internal static class DeviceSimulatorInterfaces
+    internal class SimulatorExtensions
     {
-        public static List<IDeviceSimulatorExtension> s_DeviceSimulatorExtensions = new List<IDeviceSimulatorExtension>();
+        private List<IDeviceSimulatorExtension> m_Extensions = new List<IDeviceSimulatorExtension>();
+        public List<IDeviceSimulatorExtension> Extensions => m_Extensions;
 
-        public static void InitializeDeviceSimulatorCallbacks()
+        public  SimulatorExtensions()
         {
-            s_DeviceSimulatorExtensions.Clear();
-
             foreach (var type in TypeCache.GetTypesDerivedFrom<IDeviceSimulatorExtension>())
             {
                 if (type.IsAbstract || type.IsInterface)
                     continue;
 
-                AddToList(type, ref s_DeviceSimulatorExtensions);
+                AddToList(type, ref m_Extensions);
             }
 
-            s_DeviceSimulatorExtensions.Sort(CompareExtensionOrder);
-        }
-
-        public static void ClearDeviceSimulatorCallbacks()
-        {
-            s_DeviceSimulatorExtensions.Clear();
+            m_Extensions.Sort(CompareExtensionOrder);
         }
 
         static void AddToList<T>(Type type, ref List<T> list) where T : class

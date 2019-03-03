@@ -86,7 +86,7 @@
                 }
             ],
             "presentation": {
-                "overlayPath": "SamsungGalaxyS10Plus_Overlay.png",
+                "overlayPath": "Samsung Galaxy S10+_Overlay.png",
                 "borderSize": {
                     "x": 30.0,
                     "y": 60.0,

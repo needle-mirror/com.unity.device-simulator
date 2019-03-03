@@ -23,51 +23,33 @@ namespace Unity.DeviceSimulator
 
     internal enum SimulationState{ Enabled, Disabled }
 
-    internal class SimulatorJsonSerialization
+    [Serializable]
+    internal class SimulatorSerializationStates
     {
         public bool controlPanelHidden = false;
+        public float controlPanelWidth = 300f;
+
+        public Dictionary<string, bool> controlPanelFoldouts = new Dictionary<string, bool>();
+        public List<string> controlPanelFoldoutKeys = new List<string>();
+        public List<bool> controlPanelFoldoutValues = new List<bool>();
+
+        public Dictionary<string, string> extensions = new Dictionary<string, string>();
+        public List<string> extensionNames = new List<string>();
+        public List<string> extensionStates = new List<string>();
+
         public int scale = 20;
         public bool fitToScreenEnabled = true;
+
         public int rotationDegree = 0;
-        public bool highlightSafeAreaEnabled = false;
         [NonSerialized]
         public Quaternion rotation = Quaternion.identity;
+
+        public bool highlightSafeAreaEnabled = false;
         public string friendlyName = string.Empty;
     }
 
     internal static class SimulatorUtilities
     {
-        public static void SetTextureCoordinates(ScreenOrientation orientation, Vector2[] vertices)
-        {
-            Assert.IsTrue(vertices.Length == 4);
-
-            // Check the orientation to set the UVs correctly.
-            var uvs = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
-
-            int startPos = 0;
-            switch (orientation)
-            {
-                case ScreenOrientation.Portrait:
-                    startPos = 0;
-                    break;
-                case ScreenOrientation.LandscapeRight:
-                    startPos = 1;
-                    break;
-                case ScreenOrientation.PortraitUpsideDown:
-                    startPos = 2;
-                    break;
-                case ScreenOrientation.LandscapeLeft:
-                    startPos = 3;
-                    break;
-            }
-
-            for (int index = 0; index < 4; ++index)
-            {
-                var uvIndex = (index + startPos) % 4;
-                vertices[index] = uvs[uvIndex];
-            }
-        }
-
         public static ScreenOrientation ToScreenOrientation(UIOrientation original)
         {
             switch (original)
@@ -88,7 +70,11 @@ namespace Unity.DeviceSimulator
 
         public static ScreenOrientation RotationToScreenOrientation(Quaternion rotation)
         {
-            var angle = rotation.eulerAngles.z;
+            return RotationToScreenOrientation(rotation.eulerAngles.z);
+        }
+
+        public static ScreenOrientation RotationToScreenOrientation(float angle)
+        {
             ScreenOrientation orientation = ScreenOrientation.Portrait;
             if (angle > 315 || angle <= 45)
             {

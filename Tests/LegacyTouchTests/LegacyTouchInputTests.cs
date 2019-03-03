@@ -10,12 +10,11 @@ namespace Tests
 {
     public class LegacyTouchInputTests
     {
-        private TestSimulatorWindow m_SimulatorWindow;
         private DeviceInfo m_Device;
         private IInputProvider m_InputProvider;
         private ScreenSimulation m_ScreenSimulation;
 
-        private class TestSimulatorWindow : ISimulatorWindow
+        private class TestSimulatorWindow
         {
             public Action OnWindowFocus { get; set; }
             public Vector2 TargetSize { get; set; }
@@ -32,8 +31,6 @@ namespace Tests
         [OneTimeSetUp]
         public void OneTimeSetUp()
         {
-            m_SimulatorWindow = new TestSimulatorWindow();
-
             var screen = new ScreenData()
             {
                 dpi = 200,
@@ -75,7 +72,7 @@ namespace Tests
         public void SetUp()
         {
             m_InputProvider = new TestInput();
-            m_ScreenSimulation = new ScreenSimulation(m_Device, m_InputProvider, new SimulationPlayerSettings(), m_SimulatorWindow);
+            m_ScreenSimulation = new ScreenSimulation(m_Device, m_InputProvider, new SimulationPlayerSettings());
         }
 
         [TearDown]
@@ -88,6 +85,7 @@ namespace Tests
                     phase = TouchPhase.Ended,
                     position = Vector2.zero
                 });
+            m_ScreenSimulation.Dispose();
         }
 
         [UnityTest]
@@ -125,8 +123,7 @@ namespace Tests
             var position = new Vector2(100, 200);
 
             Screen.orientation = orientation;
-            var newRenderResolution = new Vector2(m_SimulatorWindow.TargetSize.x + 100, m_SimulatorWindow.TargetSize.y + 400);
-            Screen.SetResolution((int)newRenderResolution.x, (int)newRenderResolution.y, false);
+            Screen.SetResolution(Screen.currentResolution.width + 100, Screen.currentResolution.height + 400, false);
 
             m_InputProvider.OnTouchEvent.Invoke(
                 new TouchEvent()
@@ -151,10 +148,9 @@ namespace Tests
         {
             var position = new Vector2(100, 200);
 
-            var newRenderResolution = new Vector2(m_SimulatorWindow.TargetSize.x + 100, m_SimulatorWindow.TargetSize.y + 400);
-            Screen.SetResolution((int)newRenderResolution.x, (int)newRenderResolution.y, false);
-
+            Screen.SetResolution(Screen.currentResolution.width + 100, Screen.currentResolution.height + 400, false);
             Screen.orientation = orientation;
+
             m_InputProvider.OnTouchEvent.Invoke(
                 new TouchEvent()
                 {

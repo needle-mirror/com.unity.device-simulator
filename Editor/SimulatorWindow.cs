@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
@@ -12,17 +11,15 @@ using UnityEngine.UIElements;
 namespace Unity.DeviceSimulator
 {
     [EditorWindowTitle(title = "Simulator", useTypeNameAsIconName = true)]
-    internal class SimulatorWindow : PlayModeView, ISimulatorWindow, IHasCustomMenu
+    internal class SimulatorWindow : PlayModeView, IHasCustomMenu, ISerializationCallbackReceiver
     {
         private SimulationState m_State = SimulationState.Enabled;
         private ScreenSimulation m_ScreenSimulation;
         private SystemInfoSimulation m_SystemInfoSimulation;
         private ApplicationSimulation m_ApplicationSimulation;
 
-        private const string kJsonFileName = "SimulatorWindowStatesJsonFile.json";
-        private const string kJsonFileEditorPrefKey = "SimulatorWindowStatesJsonFile";
-
-        private InputProvider m_InputProvider;
+        [SerializeField]
+        private InputProvider m_InputProvider = new InputProvider();
 
         private DeviceDatabase m_DeviceDatabase;
 
@@ -40,7 +37,8 @@ namespace Unity.DeviceSimulator
 
         private string m_DeviceSearchContent = string.Empty;
 
-        private SimulatorJsonSerialization m_SimulatorJsonSerialization = null;
+        [SerializeField]
+        private SimulatorSerializationStates m_SimulatorSerializationStates = null;
 
         private VisualElement m_DeviceListMenu = null;
         private TextElement m_SelectedDeviceName = null;
@@ -52,25 +50,6 @@ namespace Unity.DeviceSimulator
         private SimulatorPreviewPanel m_PreviewPanel = null;
 
         public Action OnWindowFocus { get; set; }
-
-        public Vector2 TargetSize
-        {
-            set
-            {
-                targetSize = value;
-                OnStateChanged();
-            }
-        }
-
-        public ScreenOrientation TargetOrientation
-        {
-            set
-            {
-                if (m_PreviewPanel != null)
-                    m_PreviewPanel.TargetOrientation = value;
-                OnStateChanged();
-            }
-        }
 
         [MenuItem("Window/General/Device Simulator", false, 2000)]
         public static void ShowWindow()
@@ -103,11 +82,8 @@ namespace Unity.DeviceSimulator
             var tileImage = AssetDatabase.LoadAssetAtPath<Texture2D>("packages/com.unity.device-simulator/Editor/icons/title.png");
             this.titleContent = new GUIContent("Simulator", tileImage);
 
-            DeviceSimulatorInterfaces.InitializeDeviceSimulatorCallbacks();
             InitDeviceInfoList();
-
-            m_SimulatorJsonSerialization = LoadStates();
-            SetCurrentDeviceIndex();
+            SetCurrentDeviceIndex(m_SimulatorSerializationStates, false);
 
             this.clearColor = Color.black;
             this.playModeViewName = "Device Simulator";
@@ -122,43 +98,43 @@ namespace Unity.DeviceSimulator
             var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{kPackagePath}/uxmls/ui_device_simulator.uxml");
             asset.CloneTree(rootVisualElement);
 
-            // We need to initialize SimulatorPlayerSettings before ScreenSimulation.
             var playerSettings = new SimulationPlayerSettings();
-
-            m_InputProvider = new InputProvider();
-            if (m_SimulatorJsonSerialization != null)
-                m_InputProvider.Rotation = m_SimulatorJsonSerialization.rotation; // We have to set the rotation here as we use it in ScreenSimulation constructor.
-
             InitSimulation(playerSettings);
 
             InitToolbar();
             m_Splitter = rootVisualElement.Q<TwoPaneSplitView>("splitter");
-            if (m_SimulatorJsonSerialization != null)
-                m_Splitter.LeftPanelHidden = m_SimulatorJsonSerialization.controlPanelHidden;
+            m_Splitter.ApplySerializationStates(m_SimulatorSerializationStates);
 
             m_ControlPanel = new SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_SystemInfoSimulation,
-                m_ScreenSimulation, m_ApplicationSimulation, playerSettings);
+                m_ScreenSimulation, m_ApplicationSimulation, playerSettings, m_SimulatorSerializationStates);
+            m_ControlPanel.ApplySerializationStates(m_SimulatorSerializationStates);
 
-            m_PreviewPanel = new SimulatorPreviewPanel(rootVisualElement.Q<VisualElement>("preview-panel"), m_InputProvider, CurrentDeviceInfo, m_SimulatorJsonSerialization)
+            m_PreviewPanel = new SimulatorPreviewPanel(rootVisualElement.Q<VisualElement>("preview-panel"), m_InputProvider)
             {
-                TargetOrientation = m_ScreenSimulation.orientation,
-                IsFullScreen = m_ScreenSimulation.fullScreen,
                 OnControlPanelHiddenChanged = HideControlPanel
             };
+            m_PreviewPanel.Update(CurrentDeviceInfo, m_ScreenSimulation);
+            m_PreviewPanel.ApplySerializationStates(m_SimulatorSerializationStates);
         }
 
         private void OnGUI()
         {
             if (Event.current.type == EventType.Repaint && GetMainPlayModeView() == this)
-                m_PreviewPanel.PreviewTexture = RenderView(Event.current.mousePosition, false);
+            {
+                var previewTexture = RenderView(Event.current.mousePosition, false);
+                m_PreviewPanel.PreviewTexture = previewTexture.IsCreated() ? previewTexture : null;
+                CurrentDeviceInfo?.LoadOverlayImage();
+                m_PreviewPanel.OverlayTexture = CurrentDeviceInfo?.Screens[0].presentation.overlay;
+            }
         }
 
         private void InitSimulation(SimulationPlayerSettings playerSettings)
         {
             m_ScreenSimulation?.Dispose();
 
-            m_ScreenSimulation = new ScreenSimulation(CurrentDeviceInfo, m_InputProvider, playerSettings, this);
-            m_ScreenSimulation.OnFullScreenChanged += OnFullScreenChanged;
+            m_ScreenSimulation = new ScreenSimulation(CurrentDeviceInfo, m_InputProvider, playerSettings);
+            targetSize = new Vector2(m_ScreenSimulation.currentResolution.width, m_ScreenSimulation.currentResolution.height);
+            m_ScreenSimulation.OnResolutionChanged += (width, height) => { targetSize = new Vector2(width, height); };
 
             m_SystemInfoSimulation?.Dispose();
 
@@ -215,76 +191,94 @@ namespace Unity.DeviceSimulator
 
         private void OnDisable()
         {
-            SaveStates();
             m_ScreenSimulation.Dispose();
             m_SystemInfoSimulation.Dispose();
         }
 
-        private void OnStateChanged()
+        private void BeforeSerializeStates()
         {
-            m_PreviewPanel?.OnStateChanged();
-        }
-
-        private void OnFullScreenChanged(bool fullScreen)
-        {
-            if (m_PreviewPanel != null)
+            m_SimulatorSerializationStates = new SimulatorSerializationStates()
             {
-                m_PreviewPanel.IsFullScreen = fullScreen;
-                m_PreviewPanel.OnStateChanged();
-            }
-        }
-
-        private void SaveStates()
-        {
-            SimulatorJsonSerialization states = new SimulatorJsonSerialization()
-            {
-                controlPanelHidden = m_PreviewPanel.ControlPanelHidden,
-                scale = m_PreviewPanel.Scale,
-                fitToScreenEnabled = m_PreviewPanel.FitToScreenEnabled,
-                rotationDegree = m_PreviewPanel.RotationDegree,
-                highlightSafeAreaEnabled = m_PreviewPanel.HighlightSafeAre,
                 friendlyName = CurrentDeviceInfo.friendlyName
             };
 
-            var jsonString = JsonUtility.ToJson(states);
-            if (string.IsNullOrEmpty(jsonString))
-                return;
+            m_ControlPanel.StoreSerializationStates(ref m_SimulatorSerializationStates);
+            m_PreviewPanel.StoreSerializationStates(ref m_SimulatorSerializationStates);
+            m_Splitter.StoreSerializationStates(ref m_SimulatorSerializationStates);
 
-            var jsonFilePath = Path.Combine(Application.persistentDataPath, kJsonFileName);
-            if (File.Exists(jsonFilePath))
-                File.Delete(jsonFilePath);
-            File.WriteAllText(jsonFilePath, jsonString);
+            foreach (var foldout in m_SimulatorSerializationStates.controlPanelFoldouts)
+            {
+                m_SimulatorSerializationStates.controlPanelFoldoutKeys.Add(foldout.Key);
+                m_SimulatorSerializationStates.controlPanelFoldoutValues.Add(foldout.Value);
+            }
 
-            EditorPrefs.SetString(kJsonFileEditorPrefKey, jsonFilePath);
+            foreach (var extension in m_SimulatorSerializationStates.extensions)
+            {
+                m_SimulatorSerializationStates.extensionNames.Add(extension.Key);
+                m_SimulatorSerializationStates.extensionStates.Add(extension.Value);
+            }
         }
 
-        private SimulatorJsonSerialization LoadStates()
+        private void AfterDeserializeStates(SimulatorSerializationStates states)
         {
-            if (!EditorPrefs.HasKey(kJsonFileEditorPrefKey))
-                return null;
-
-            var jsonFilePath = EditorPrefs.GetString(kJsonFileEditorPrefKey);
-            if (string.IsNullOrEmpty(jsonFilePath) || !File.Exists(jsonFilePath))
-                return null;
-
-            var jsonString = File.ReadAllText(jsonFilePath);
-            if (string.IsNullOrEmpty(jsonString))
-                return null;
-
-            SimulatorJsonSerialization states = null;
-            try
-            {
-                states = JsonUtility.FromJson<SimulatorJsonSerialization>(jsonString);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-
             states.rotation = Quaternion.Euler(0, 0, 360 - states.rotationDegree);
 
-            return states;
+            Assert.AreEqual(states.controlPanelFoldoutKeys.Count, states.controlPanelFoldoutValues.Count);
+            for (int index = 0; index < states.controlPanelFoldoutKeys.Count; ++index)
+            {
+                states.controlPanelFoldouts.Add(states.controlPanelFoldoutKeys[index], states.controlPanelFoldoutValues[index]);
+            }
+
+            Assert.AreEqual(states.extensionNames.Count, states.extensionStates.Count);
+            for (int index = 0; index < states.extensionNames.Count; ++index)
+            {
+                states.extensions.Add(states.extensionNames[index], states.extensionStates[index]);
+            }
         }
+
+#if UNITY_2020_2_OR_NEWER
+        public void OnBeforeSerialize()
+        {
+            BeforeSerializeStates();
+        }
+
+        public void OnAfterDeserialize()
+        {
+            AfterDeserializeStates(m_SimulatorSerializationStates);
+        }
+
+#else
+        protected override string SerializeView()
+        {
+            BeforeSerializeStates();
+            return JsonUtility.ToJson(m_SimulatorSerializationStates);
+        }
+
+        protected override void DeserializeView(string serializedView)
+        {
+            m_SimulatorSerializationStates = JsonUtility.FromJson<SimulatorSerializationStates>(serializedView);
+            AfterDeserializeStates(m_SimulatorSerializationStates);
+
+            SetCurrentDeviceIndex(m_SimulatorSerializationStates, true);
+            m_InputProvider.Rotation = m_SimulatorSerializationStates.rotation;
+            m_Splitter.ApplySerializationStates(m_SimulatorSerializationStates);
+            m_ControlPanel.ApplySerializationStates(m_SimulatorSerializationStates);
+            m_PreviewPanel.ApplySerializationStates(m_SimulatorSerializationStates);
+        }
+
+        public new void OnBeforeSerialize()
+        {
+            BeforeSerializeStates();
+            base.OnBeforeSerialize();
+        }
+
+        public new void OnAfterDeserialize()
+        {
+            base.OnAfterDeserialize();
+            AfterDeserializeStates(m_SimulatorSerializationStates);
+        }
+
+#endif
 
         private void InitDeviceInfoList()
         {
@@ -294,16 +288,20 @@ namespace Unity.DeviceSimulator
             CurrentDeviceIndex = 0;
         }
 
-        void SetCurrentDeviceIndex()
+        void SetCurrentDeviceIndex(SimulatorSerializationStates states, bool triggerOnDeviceSelected)
         {
-            if (m_SimulatorJsonSerialization == null)
+            if (states == null || string.IsNullOrEmpty(states.friendlyName))
                 return;
 
             for (int index = 0; index < m_DeviceDatabase.m_Devices.Count; ++index)
             {
-                if (m_DeviceDatabase.m_Devices[index].friendlyName == m_SimulatorJsonSerialization.friendlyName)
+                if (m_DeviceDatabase.m_Devices[index].friendlyName == states.friendlyName)
                 {
-                    CurrentDeviceIndex = index;
+                    if (triggerOnDeviceSelected)
+                        OnDeviceSelected(index);
+                    else
+                        CurrentDeviceIndex = index;
+
                     break;
                 }
             }
@@ -345,7 +343,7 @@ namespace Unity.DeviceSimulator
             InitSimulation(playerSettings);
 
             m_ControlPanel.Update(CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, playerSettings);
-            m_PreviewPanel.Update(CurrentDeviceInfo, m_ScreenSimulation.fullScreen);
+            m_PreviewPanel.Update(CurrentDeviceInfo, m_ScreenSimulation);
         }
 
         private void ShowDeviceInfoList()

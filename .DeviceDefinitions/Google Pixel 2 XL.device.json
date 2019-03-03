@@ -54,7 +54,7 @@
                 }
             ],
             "presentation": {
-                "overlayPath": "GooglePixel2XL_Overlay.png",
+                "overlayPath": "Google Pixel 2 XL_Overlay.png",
                 "borderSize": {
                     "x": 60.0,
                     "y": 210.0,

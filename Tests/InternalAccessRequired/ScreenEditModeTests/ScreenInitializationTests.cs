@@ -11,7 +11,6 @@ namespace Tests
         internal DeviceInfo m_TestDevice;
         internal ScreenSimulation m_Simulation;
         internal TestInput m_InputTest;
-        internal TestWindow m_TestWindow;
 
         private UIOrientation m_CachedOrientation;
         private bool m_CachedAutoPortrait;
@@ -36,7 +35,6 @@ namespace Tests
             m_CachedScaledDPI = serializedSettings.FindProperty("targetPixelDensity").intValue;
 
             m_TestDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations);
-            m_TestWindow = new TestWindow();
         }
 
         [OneTimeTearDown]
@@ -92,9 +90,8 @@ namespace Tests
             serializedSettings.FindProperty("targetPixelDensity").intValue = scaledDpi;
             serializedSettings.ApplyModifiedPropertiesWithoutUndo();
 
-            var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations, screenWidth, screenHeight, screenDpi);
-            var testWindow = new TestWindow();
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), testWindow);
+            var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations, screenWidth, screenHeight, default, screenDpi);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings());
 
             if (screenDpi >= scaledDpi)
             {
@@ -103,7 +100,7 @@ namespace Tests
                     ? new Vector2((int)(screenHeight * scale), (int)(screenWidth * scale))
                     : new Vector2((int)(screenWidth * scale), (int)(screenHeight * scale));
 
-                Assert.AreEqual(expectedResolution, testWindow.TargetSize);
+                Assert.AreEqual(expectedResolution, new Vector2(Screen.currentResolution.width, Screen.currentResolution.height));
             }
             else
             {
@@ -111,7 +108,7 @@ namespace Tests
                     ? new Vector2(screenHeight, screenWidth)
                     : new Vector2(screenWidth, screenHeight);
 
-                Assert.AreEqual(expectedResolution, testWindow.TargetSize);
+                Assert.AreEqual(expectedResolution, new Vector2(Screen.currentResolution.width, Screen.currentResolution.height));
             }
         }
 
@@ -129,7 +126,7 @@ namespace Tests
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
 
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[orientation];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_TestWindow);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings());
             Assert.AreEqual(orientation, Screen.orientation);
         }
 
@@ -143,7 +140,7 @@ namespace Tests
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[orientation];
 
             PlayerSettings.defaultInterfaceOrientation = ScreenTestUtilities.ScreenOrientationToUI[orientation];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_TestWindow);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings());
 
             Assert.AreEqual(orientation, Screen.orientation);
         }
@@ -169,7 +166,7 @@ namespace Tests
             PlayerSettings.allowedAutorotateToLandscapeLeft = landscapeLeft;
             PlayerSettings.allowedAutorotateToLandscapeRight = landscapeRight;
 
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_TestWindow);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings());
 
             Assert.AreEqual(portrait, Screen.autorotateToPortrait);
             Assert.AreEqual(portraitUpsideDown, Screen.autorotateToPortraitUpsideDown);

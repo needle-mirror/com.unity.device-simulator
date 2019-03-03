@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <UXML xmlns="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements">
     <Template src="ui_screen_settings.uxml" name="ScreenSettings" />
+    <Template src="ui_application_settings.uxml" name="ApplicationSettings" />
     <editor:Toolbar class="unity-device-simulator__toolbar">
         <editor:ToolbarMenu name="playmode-view-menu" />
         <editor:ToolbarSpacer />
@@ -12,18 +13,18 @@
         <editor:ToolbarButton name="reload-player-settings" style="-unity-text-align: middle-center;" text="Reload" tooltip="Reload the player settings" />
     </editor:Toolbar>
     <editor:TwoPaneSplitView name="splitter" left-pane-initial-size="300" minimum-left-pane-size="235" minimum-right-pane-size="200">
-        <editor:Style src="../stylesheets/styles_split_view.uss"/>
-        <editor:Style src="../stylesheets/styles_common.uss"/>
+        <editor:Style src="../stylesheets/styles_split_view.uss" />
+        <editor:Style src="../stylesheets/styles_common.uss" />
         <ScrollView mode="Vertical">
             <VisualElement class="unity-device-simulator__control-panel" name="control-panel">
-                <Foldout class="unity-device-simulator__control-panel_foldout" text="Device Specifications" value="true">
+                <Foldout class="unity-device-simulator__control-panel_foldout" text="Device Specifications" value="true" name="device-specifications">
                     <Label class="unity-device-simulator__control-panel-label" text="OS: N/A" name="device_os" />
-                    <Label class="unity-device-simulator__control-panel-label" text="Chipset: N/A" name="device_chipset" />
                     <Label class="unity-device-simulator__control-panel-label" text="CPU: N/A" name="device_cpu" />
                     <Label class="unity-device-simulator__control-panel-label" text="GPU: N/A" name="device_gpu" />
                     <Label class="unity-device-simulator__control-panel-label" text="Resolution: 0 x 0" name="device_resolution" />
                 </Foldout>
                 <Instance template="ScreenSettings" />
+                <Instance template="ApplicationSettings" />
             </VisualElement>
         </ScrollView>
         <VisualElement name="preview-panel">
@@ -50,7 +51,6 @@
             <VisualElement class="unity-device-simulator__scrollview-container" name="scrollview-container">
                 <ScrollView class="unity-device-simulator__preview-scrollview" name="preview-scroll-view" mode="VerticalAndHorizontal">
                     <VisualElement class="unity-device-simulator__preview-container" name="preview-container">
-                        <IMGUIContainer name="preview-imgui-renderer" />
                     </VisualElement>
                 </ScrollView>
             </VisualElement>

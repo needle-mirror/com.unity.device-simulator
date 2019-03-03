@@ -231,6 +231,7 @@ namespace Unity.DeviceSimulator
 
         private void HandleSearchField()
         {
+            m_SearchField.SetFocus();
             var newSearchContent = m_SearchField.OnToolbarGUI(m_SearchContent, null);
             if (newSearchContent == m_SearchContent)
                 return;

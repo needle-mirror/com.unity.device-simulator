@@ -1,6 +1,7 @@
 using System.Collections.Generic;
-using NUnit.Framework;
+using Unity.DeviceSimulator;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.UIElements;
 
 namespace UnityEditor.UIElements
@@ -40,22 +41,26 @@ namespace UnityEditor.UIElements
             }
         }
 
-        public bool LeftPanelHidden { get; set; }
+        private VisualElement m_Content;
 
         private VisualElement m_LeftPane;
         private VisualElement m_RightPane;
 
         private VisualElement m_DragLine;
         private VisualElement m_DragLineAnchor;
+
+        [SerializeField]
+        private float m_LeftPaneWidth = 1;
+
         private float m_MinLeftDimension;
         private float m_MinRightDimension;
 
-        private VisualElement m_Content;
-
-        private float m_LeftPaneInitialDimension;
-
         private SquareResizer m_Resizer;
 
+        [SerializeField]
+        private bool m_LeftPanelHidden = false;
+
+        [SerializeField]
         private float m_PreviousLeftPaneWidth = 1;
 
         public TwoPaneSplitView()
@@ -84,14 +89,42 @@ namespace UnityEditor.UIElements
             m_DragLine.AddToClassList(s_HandleDragLineClassName);
             m_DragLineAnchor.Add(m_DragLine);
 
-            m_LeftPaneInitialDimension = leftPaneStartDimension;
+            m_LeftPaneWidth = leftPaneStartDimension;
+
             m_MinLeftDimension = minLeftDimension;
             m_MinRightDimension = minRightDimension;
 
-            style.minWidth = m_LeftPaneInitialDimension;
+            style.minWidth = leftPaneStartDimension;
 
             // We reply on the UIElement layout engine to add the children defined in the uxml.
             RegisterCallback<GeometryChangedEvent>(OnPostDisplaySetup);
+        }
+
+        public void StoreSerializationStates(ref SimulatorSerializationStates states)
+        {
+            states.controlPanelHidden = m_LeftPanelHidden;
+            states.controlPanelWidth = m_LeftPanelHidden ? m_PreviousLeftPaneWidth : m_LeftPaneWidth;
+        }
+
+        public void ApplySerializationStates(SimulatorSerializationStates states)
+        {
+            if (states == null)
+                return;
+
+            m_LeftPanelHidden = states.controlPanelHidden;
+            m_LeftPaneWidth = states.controlPanelWidth;
+        }
+
+        internal override void OnViewDataReady()
+        {
+            OverwriteFromViewData(this, viewDataKey);
+
+            // The calling order of OnViewDataReady() and OnPostDisplaySetup() are not determined if multiple simulator windows are opened...
+            if (m_LeftPane != null)
+            {
+                m_LeftPane.style.width = m_LeftPaneWidth;
+                m_DragLineAnchor.style.left = m_LeftPaneWidth;
+            }
         }
 
         private void OnPostDisplaySetup(GeometryChangedEvent evt)
@@ -100,9 +133,8 @@ namespace UnityEditor.UIElements
 
             PostDisplaySetup();
 
-            // We can only initialize the hidden state after we have the UIElements initialized.
-            if (LeftPanelHidden)
-                HideLeftPanel(LeftPanelHidden);
+            if (m_LeftPanelHidden)
+                HideLeftPanel(m_LeftPanelHidden);
 
             UnregisterCallback<GeometryChangedEvent>(OnPostDisplaySetup);
             RegisterCallback<GeometryChangedEvent>(OnSizeChange);
@@ -111,7 +143,7 @@ namespace UnityEditor.UIElements
         private void PostDisplaySetup()
         {
             m_LeftPane = m_Content[0];
-            m_LeftPane.style.width = m_LeftPaneInitialDimension;
+            m_LeftPane.style.width = m_LeftPaneWidth;
             m_LeftPane.style.flexShrink = 0;
 
             m_RightPane = m_Content[1];
@@ -119,7 +151,7 @@ namespace UnityEditor.UIElements
             m_RightPane.style.flexShrink = 0;
             m_RightPane.style.flexBasis = 0;
 
-            m_DragLineAnchor.style.left = m_LeftPaneInitialDimension;
+            m_DragLineAnchor.style.left = m_LeftPaneWidth;
 
             m_Resizer = new SquareResizer(this, m_MinLeftDimension, m_MinRightDimension);
             m_DragLineAnchor.AddManipulator(m_Resizer);
@@ -135,13 +167,16 @@ namespace UnityEditor.UIElements
                 var delta = maxLength - dragLinePos;
                 m_Resizer.ApplyDelta(delta);
             }
+
+            m_LeftPaneWidth = m_LeftPane.resolvedStyle.width;
+            this.SaveViewData();
         }
 
         public void HideLeftPanel(bool hidden)
         {
-            LeftPanelHidden = hidden;
+            m_LeftPanelHidden = hidden;
 
-            if (LeftPanelHidden)
+            if (m_LeftPanelHidden)
             {
                 m_PreviousLeftPaneWidth = m_LeftPane.style.width.value.value;
                 m_LeftPane.style.width = 1;
@@ -152,7 +187,11 @@ namespace UnityEditor.UIElements
                 m_PreviousLeftPaneWidth = 1;
             }
 
-            m_DragLineAnchor.style.visibility = LeftPanelHidden ? Visibility.Hidden : Visibility.Visible;
+            m_LeftPaneWidth = m_LeftPane.style.width.value.value;
+            this.SaveViewData();
+
+            m_DragLineAnchor.style.left = m_LeftPaneWidth;
+            m_DragLineAnchor.style.visibility = m_LeftPanelHidden ? Visibility.Hidden : Visibility.Visible;
         }
 
         public override VisualElement contentContainer => m_Content;
@@ -246,6 +285,9 @@ namespace UnityEditor.UIElements
                 m_Active = false;
                 target.ReleaseMouse();
                 e.StopPropagation();
+
+                m_SplitView.m_LeftPaneWidth = m_SplitView.m_LeftPane.resolvedStyle.width;
+                m_SplitView.SaveViewData();
             }
         }
     }

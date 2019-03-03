@@ -8,14 +8,12 @@ namespace Tests
     public class ScreenOrientationSupportTests
     {
         internal TestInput m_InputTest;
-        internal TestWindow m_Window;
         internal ScreenSimulation m_Simulation;
 
         [OneTimeSetUp]
         public void SetUp()
         {
             m_InputTest = new TestInput();
-            m_Window = new TestWindow();
         }
 
         [TearDown]
@@ -36,7 +34,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(supportedOrientations.ToArray());
 
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings());
             foreach (var orientation in supportedOrientations)
             {
                 Screen.orientation = orientation;
@@ -58,7 +56,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(supportedOrientations.ToArray());
 
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings());
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;

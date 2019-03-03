@@ -9,8 +9,10 @@ namespace Unity.DeviceSimulator
         public TouchPhase phase;
     }
 
+    [Serializable]
     internal class InputProvider : IInputProvider
     {
+        [SerializeField]
         private Quaternion m_Rotation = Quaternion.identity;
 
         public Action<Quaternion> OnRotation { get; set; }

@@ -8,7 +8,7 @@ namespace Unity.DeviceSimulator
 {
     internal class SimulatorScreenSettingsUI
     {
-        private VisualElement m_RootElement = null;
+        internal Foldout m_RootElement = null;
 
         // Controls for screen settings.
         private IntegerField m_ScreenWidthField = null;
@@ -28,7 +28,7 @@ namespace Unity.DeviceSimulator
         private Toggle m_AllowedLandscapeLeft = null;
         private Toggle m_AllowedLandscapeRight = null;
 
-        public SimulatorScreenSettingsUI(VisualElement rootElement, DeviceInfo deviceInfo, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
+        public SimulatorScreenSettingsUI(Foldout rootElement, DeviceInfo deviceInfo, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
         {
             m_RootElement = rootElement;
             Init(deviceInfo, screenSimulation, playerSettings);

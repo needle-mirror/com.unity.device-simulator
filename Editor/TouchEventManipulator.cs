@@ -34,21 +34,21 @@ namespace Unity.DeviceSimulator
 
         private void OnMouseDown(MouseDownEvent evt)
         {
-            TiggerTouchEvent(evt.localMousePosition, TouchPhase.Began);
+            TriggerTouchEvent(evt.localMousePosition, TouchPhase.Began);
             m_IsActive = true;
         }
 
         private void OnMouseMove(MouseMoveEvent evt)
         {
             if (m_IsActive)
-                TiggerTouchEvent(evt.localMousePosition, TouchPhase.Moved);
+                TriggerTouchEvent(evt.localMousePosition, TouchPhase.Moved);
         }
 
         private void OnMouseUp(MouseUpEvent evt)
         {
             if (m_IsActive)
             {
-                TiggerTouchEvent(evt.localMousePosition, TouchPhase.Ended);
+                TriggerTouchEvent(evt.localMousePosition, TouchPhase.Ended);
                 m_IsActive = false;
             }
         }
@@ -57,12 +57,12 @@ namespace Unity.DeviceSimulator
         {
             if (m_IsActive)
             {
-                TiggerTouchEvent(evt.localMousePosition, TouchPhase.Canceled);
+                TriggerTouchEvent(evt.localMousePosition, TouchPhase.Canceled);
                 m_IsActive = false;
             }
         }
 
-        private void TiggerTouchEvent(Vector2 mousePosition, TouchPhase touchPhase)
+        private void TriggerTouchEvent(Vector2 mousePosition, TouchPhase touchPhase)
         {
             var touchEvent = new TouchEvent()
             {

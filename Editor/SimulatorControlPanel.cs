@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
@@ -6,44 +8,24 @@ namespace Unity.DeviceSimulator
     {
         private VisualElement m_RootElement = null;
 
-        // Controls for device specifications.
-        private Label m_OS = null;
-        private Label m_Chipset = null;
-        private Label m_CPU = null;
-        private Label m_GPU = null;
-        private Label m_Resolution = null;
-
-        private SimulatorScreenSettingsUI m_SimulatorScreenSettings = null;
-
-        private SimulatorApplicationSettingsUI m_SimulatorApplicationSettings = null;
+        private SimulatorDeviceSpecificationsUI m_DeviceSpecifications;
+        private SimulatorScreenSettingsUI m_SimulatorScreenSettings;
+        private SimulatorApplicationSettingsUI m_SimulatorApplicationSettings;
+        private SimulatorExtensions m_SimulatorExtensions;
+        private readonly Dictionary<string, Foldout> m_ExtensionFoldouts = new Dictionary<string, Foldout>();
 
         public SimulatorControlPanel(VisualElement rootElement, DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation, ScreenSimulation screenSimulation,
                                      ApplicationSimulation applicationSimulation,
-                                     SimulationPlayerSettings playerSettings)
+                                     SimulationPlayerSettings playerSettings, SimulatorSerializationStates states)
         {
             m_RootElement = rootElement;
 
-            InitDeviceSpecifications();
-            UpdateDeviceSpecifications(deviceInfo, systemInfoSimulation);
+            m_DeviceSpecifications = new SimulatorDeviceSpecificationsUI(m_RootElement.Q<Foldout>("device-specifications"), deviceInfo, systemInfoSimulation);
+            m_SimulatorScreenSettings = new SimulatorScreenSettingsUI(m_RootElement.Q<Foldout>("screen-settings"), deviceInfo, screenSimulation, playerSettings);
+            m_SimulatorApplicationSettings = new SimulatorApplicationSettingsUI(m_RootElement.Q<Foldout>("application-settings"), applicationSimulation);
+            m_SimulatorExtensions = new SimulatorExtensions();
 
-            m_SimulatorScreenSettings = new SimulatorScreenSettingsUI(m_RootElement.Q<VisualElement>("screen-settings"), deviceInfo, screenSimulation, playerSettings);
-            m_SimulatorApplicationSettings = new SimulatorApplicationSettingsUI(m_RootElement, applicationSimulation);
-
-            InitDeviceSimulatorExtensions();
-        }
-
-        private void InitDeviceSpecifications()
-        {
-            m_OS = m_RootElement.Q<Label>("device_os");
-            m_Chipset = m_RootElement.Q<Label>("device_chipset");
-            m_CPU = m_RootElement.Q<Label>("device_cpu");
-            m_GPU = m_RootElement.Q<Label>("device_gpu");
-            m_Resolution = m_RootElement.Q<Label>("device_resolution");
-        }
-
-        private void InitDeviceSimulatorExtensions()
-        {
-            foreach (var extension in DeviceSimulatorInterfaces.s_DeviceSimulatorExtensions)
+            foreach (var extension in m_SimulatorExtensions.Extensions)
             {
                 var foldout = new Foldout()
                 {
@@ -53,7 +35,59 @@ namespace Unity.DeviceSimulator
                 foldout.AddToClassList("unity-device-simulator__control-panel_foldout");
 
                 m_RootElement.Add(foldout);
+                m_ExtensionFoldouts.Add(extension.GetType().ToString(), foldout);
+
+                if (states != null && states.extensions.TryGetValue(extension.GetType().ToString(), out var serializedExtension))
+                    JsonUtility.FromJsonOverwrite(serializedExtension, extension);
+
                 extension.OnExtendDeviceSimulator(foldout);
+            }
+        }
+
+        public void StoreSerializationStates(ref SimulatorSerializationStates states)
+        {
+            states.controlPanelFoldouts.Add(m_DeviceSpecifications.GetType().ToString(), m_DeviceSpecifications.m_RootElement.value);
+            states.controlPanelFoldouts.Add(m_SimulatorScreenSettings.GetType().ToString(), m_SimulatorScreenSettings.m_RootElement.value);
+            states.controlPanelFoldouts.Add(m_SimulatorApplicationSettings.GetType().ToString(), m_SimulatorApplicationSettings.m_RootElement.value);
+
+            foreach (var foldout in m_ExtensionFoldouts)
+            {
+                states.controlPanelFoldouts.Add(foldout.Key, foldout.Value.value);
+            }
+
+            foreach (var extension in m_SimulatorExtensions.Extensions)
+            {
+                var serializedExtension = JsonUtility.ToJson(extension);
+                states.extensions.Add(extension.GetType().ToString(), serializedExtension);
+            }
+        }
+
+        // TODO get rid of this method when we deprecate DeserializeView, currently exists as a hack
+        public void ApplySerializationStates(SimulatorSerializationStates states)
+        {
+            if (states == null)
+                return;
+
+            bool state;
+            if (states.controlPanelFoldouts.TryGetValue(m_DeviceSpecifications.GetType().ToString(), out state))
+            {
+                m_DeviceSpecifications.m_RootElement.value = state;
+            }
+            if (states.controlPanelFoldouts.TryGetValue(m_SimulatorScreenSettings.GetType().ToString(), out state))
+            {
+                m_SimulatorScreenSettings.m_RootElement.value = state;
+            }
+            if (states.controlPanelFoldouts.TryGetValue(m_SimulatorApplicationSettings.GetType().ToString(), out state))
+            {
+                m_SimulatorApplicationSettings.m_RootElement.value = state;
+            }
+
+            foreach (var foldout in m_ExtensionFoldouts)
+            {
+                if (states.controlPanelFoldouts.TryGetValue(foldout.Key, out state))
+                {
+                    foldout.Value.value = state;
+                }
             }
         }
 
@@ -63,16 +97,8 @@ namespace Unity.DeviceSimulator
             if (deviceInfo == null)
                 return;
 
-            UpdateDeviceSpecifications(deviceInfo, systemInfoSimulation);
+            m_DeviceSpecifications.Update(deviceInfo, systemInfoSimulation);
             m_SimulatorScreenSettings.Update(deviceInfo, screenSimulation, playerSettings);
-        }
-
-        private void UpdateDeviceSpecifications(DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation)
-        {
-            m_OS.text = "OS: " + (string.IsNullOrEmpty(deviceInfo.SystemInfo.operatingSystem) ? "N/A" : deviceInfo.SystemInfo.operatingSystem);
-            m_CPU.text = "CPU: " + (string.IsNullOrEmpty(deviceInfo.SystemInfo.processorType) ? "N/A" : deviceInfo.SystemInfo.processorType);
-            m_GPU.text = "GPU: " + (systemInfoSimulation.GraphicsDependentData == null ? "N/A" : systemInfoSimulation.GraphicsDependentData.graphicsDeviceType.ToString());
-            m_Resolution.text = $"Resolution: {deviceInfo.Screens[0].width} x {deviceInfo.Screens[0].height}";
         }
     }
 }

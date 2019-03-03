@@ -109,10 +109,3 @@ internal class TestInput : IInputProvider
         OnRotation?.Invoke(Rotation);
     }
 }
-
-public class TestWindow : ISimulatorWindow
-{
-    public Action OnWindowFocus { get; set; }
-    public Vector2 TargetSize { get; set; }
-    public ScreenOrientation TargetOrientation { get; set; }
-}
