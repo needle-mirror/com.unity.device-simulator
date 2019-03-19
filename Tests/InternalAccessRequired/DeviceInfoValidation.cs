@@ -1,13 +1,8 @@
-using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.DeviceSimulator;
-using UnityEngine;
-using UnityEngine.TestTools;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
-    public class DeviceInfoValidation
+    internal class DeviceInfoValidation
     {
         [Test]
         public void MinimalDevice()

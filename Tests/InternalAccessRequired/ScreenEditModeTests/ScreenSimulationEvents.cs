@@ -1,14 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Resources;
 using NUnit.Framework;
-using Unity.DeviceSimulator;
 using UnityEngine;
-using UnityEngine.TestTools;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
-    public class ScreenSimulationEvents
+    internal class ScreenSimulationEvents
     {
         private DeviceInfo m_TestDevice;
         private ScreenSimulation m_Simulation;

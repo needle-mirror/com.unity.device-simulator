@@ -1,12 +1,11 @@
 using NUnit.Framework;
-using Unity.DeviceSimulator;
 using UnityEditor;
 using UnityEngine;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
     // Tests to check that Player Settings correctly affect Simulator initialization
-    public class ScreenInitializationTests
+    internal class ScreenInitializationTests
     {
         internal DeviceInfo m_TestDevice;
         internal ScreenSimulation m_Simulation;

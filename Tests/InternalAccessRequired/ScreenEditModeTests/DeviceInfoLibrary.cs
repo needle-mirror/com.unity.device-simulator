@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using Unity.DeviceSimulator;
 using UnityEngine;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
     internal class DeviceInfoLibrary
     {

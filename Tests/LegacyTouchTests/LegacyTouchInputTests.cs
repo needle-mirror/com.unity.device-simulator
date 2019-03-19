@@ -1,14 +1,12 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using Unity.DeviceSimulator;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
-    public class LegacyTouchInputTests
+    internal class LegacyTouchInputTests
     {
         private DeviceInfo m_Device;
         private IInputProvider m_InputProvider;

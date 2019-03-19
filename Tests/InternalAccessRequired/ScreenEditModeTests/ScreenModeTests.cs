@@ -1,9 +1,7 @@
-using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.DeviceSimulator;
 using UnityEngine;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
     internal class ScreenModeTests
     {

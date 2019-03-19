@@ -1,11 +1,10 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using Unity.DeviceSimulator;
 using UnityEngine;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
-    public class ScreenOrientationTests
+    internal class ScreenOrientationTests
     {
         internal DeviceInfo m_TestDevice;
         internal ScreenSimulation m_Simulation;

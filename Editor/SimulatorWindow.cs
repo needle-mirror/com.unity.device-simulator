@@ -236,7 +236,7 @@ namespace Unity.DeviceSimulator
             }
         }
 
-#if UNITY_2020_2_OR_NEWER
+#if UNITY_2020_1_OR_NEWER
         public void OnBeforeSerialize()
         {
             BeforeSerializeStates();

@@ -1,8 +1,8 @@
 using UnityEngine;
 
-namespace Tests
+namespace Unity.DeviceSimulator.Tests
 {
-    public class OnLowMemoryTest
+    internal class OnLowMemoryTest
     {
         public int Counter = 0;
 

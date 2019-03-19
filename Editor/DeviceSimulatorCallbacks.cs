@@ -10,6 +10,7 @@ namespace Unity.DeviceSimulator
         /// <summary>
         /// The callback which is triggered when changing device.
         /// </summary>
+        /// <value>The callback users can register for device changing.</value>
         public static event Action OnDeviceChange;
 
         internal static void InvokeOnDeviceChange()

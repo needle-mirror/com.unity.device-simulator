@@ -13,12 +13,14 @@ namespace Unity.DeviceSimulator
         /// <summary>
         /// Title which is shown as the title of the extended UI.
         /// </summary>
+        /// <value>Title property returns the title of the extended UI.</value>
         string extensionTitle { get; }
 
         /// <summary>
-        /// Callback which is implemented by the users to extend the UI. It is called by Device Simulator.
+        /// Called by Device Simulator during initialisation. Allows adding custom widgets to the simulator window.
         /// </summary>
-        /// <param name="visualElement"></param>
+        /// <param name="visualElement">Root [VisualElement](https://docs.unity3d.com/ScriptReference/UIElements.VisualElement.html)
+        /// to which extension UI should be added.</param>
         void OnExtendDeviceSimulator(VisualElement visualElement);
     }
 
