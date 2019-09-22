@@ -1,0 +1,7 @@
+.unity-device-simulator__scale-label:hover {
+    background-color: rgb(203, 203, 203);
+}
+
+.unity-two-pane-split-view__dragline-anchor {
+    background-color: rgb(89, 89, 89);
+}

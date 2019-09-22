@@ -1,0 +1,16 @@
+{
+    "name": "Unity.DeviceSimulator.Editor",
+    "references": [
+        "GUID:762596d9ab04c42c89319920e8e541cd"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": []
+}

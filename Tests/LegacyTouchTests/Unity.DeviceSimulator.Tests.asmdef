@@ -1,0 +1,21 @@
+{
+    "name": "Unity.DeviceSimulator.Tests",
+    "references": [
+        "Unity.DeviceSimulator.Editor",
+        "Unity.DeviceSimulator.Runtime",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": []
+}
