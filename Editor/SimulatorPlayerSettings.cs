@@ -14,7 +14,7 @@ namespace Unity.DeviceSimulator
 
         private DeviceInfo m_DeviceInfo = null;
 
-        private Toggle m_UseDefaultPlayerSettings = null;
+        private Toggle m_OverrideDefaultPlayerSettings = null;
         private VisualElement m_CustomizedPlayerSettingsElement = null;
 
         private Toggle m_StartInFullscreen = null;
@@ -36,12 +36,12 @@ namespace Unity.DeviceSimulator
         private VisualElement m_GraphicsAPIPlaceholder = null;
         private PopupField<GraphicsDeviceType> m_GraphicsAPIField = null;
 
-        public bool UseDefaultPlayerSettings => m_UseDefaultPlayerSettings.value;
+        public bool OverrideDefaultPlayerSettings => m_OverrideDefaultPlayerSettings.value;
 
         private SimulationPlayerSettings m_CustomizedPlayerSettings = null;
 
         public SimulationPlayerSettings CustomizedPlayerSettings => m_CustomizedPlayerSettings;
-        public SimulationPlayerSettings CurrentPlayerSettings => UseDefaultPlayerSettings? InitDefaultPlayerSettings() : m_CustomizedPlayerSettings;
+        public SimulationPlayerSettings CurrentPlayerSettings => OverrideDefaultPlayerSettings ? m_CustomizedPlayerSettings : InitDefaultPlayerSettings();
 
         public SimulatorPlayerSettingsUI(VisualElement rootElement, DeviceInfo deviceInfo, SimulatorJsonSerialization states)
         {
@@ -54,11 +54,11 @@ namespace Unity.DeviceSimulator
         {
             InitPlayerSettings(states);
 
-            bool useDefaultPlayerSettings = (states != null) ? states.useDefaultPlayerSettings : true;
-            m_UseDefaultPlayerSettings = m_RootElement.Q<Toggle>("use-default-player-settings");
-            m_UseDefaultPlayerSettings.RegisterValueChangedCallback(SetUsePlayerSettings);
-            m_UseDefaultPlayerSettings.SetValueWithoutNotify(useDefaultPlayerSettings);
-            UpdateDefaultPlayerSettingsStatus();
+            bool overrideDefaultPlayerSettings = (states != null) ? states.overrideDefaultPlayerSettings : false;
+            m_OverrideDefaultPlayerSettings = m_RootElement.Q<Toggle>("override-default-player-settings");
+            m_OverrideDefaultPlayerSettings.RegisterValueChangedCallback(SetOverridePlayerSettings);
+            m_OverrideDefaultPlayerSettings.SetValueWithoutNotify(overrideDefaultPlayerSettings);
+            UpdateOverridePlayerSettingsStatus();
 
             m_CustomizedPlayerSettingsElement = m_RootElement.Q<VisualElement>("customized-player-settings");
 
@@ -118,7 +118,7 @@ namespace Unity.DeviceSimulator
             m_GraphicsAPIPlaceholder.SetEnabled(!m_CustomizedPlayerSettings.autoGraphicsAPI);
             #endregion
 
-            UpdateCustomizedPlayerSettings(m_UseDefaultPlayerSettings.value);
+            UpdateCustomizedPlayerSettings(m_OverrideDefaultPlayerSettings.value);
             UpdateStartInFullScreen();
             UpdateResolutionScalingMode(m_CustomizedPlayerSettings.resolutionScalingMode);
             UpdateAllowedOrientations(m_CustomizedPlayerSettings.defaultOrientation);
@@ -166,7 +166,7 @@ namespace Unity.DeviceSimulator
             return defaultPlayerSettings;
         }
 
-        private void UpdateDefaultPlayerSettingsStatus()
+        private void UpdateOverridePlayerSettingsStatus()
         {
             var buildTargetGroup = BuildTargetGroup.Unknown;
             var buildTarget = BuildTarget.NoTarget;
@@ -185,23 +185,23 @@ namespace Unity.DeviceSimulator
             bool isTargetSupported = BuildPipeline.IsBuildTargetSupported(buildTargetGroup, buildTarget);
             if (isTargetSupported)
             {
-                m_UseDefaultPlayerSettings.SetEnabled(true);
+                m_OverrideDefaultPlayerSettings.SetEnabled(true);
             }
             else
             {
-                m_UseDefaultPlayerSettings.SetEnabled(false);
-                m_UseDefaultPlayerSettings.SetValueWithoutNotify(false);
+                m_OverrideDefaultPlayerSettings.SetEnabled(false);
+                m_OverrideDefaultPlayerSettings.SetValueWithoutNotify(true);
             }
         }
 
-        private void SetUsePlayerSettings(ChangeEvent<bool> evt)
+        private void SetOverridePlayerSettings(ChangeEvent<bool> evt)
         {
             UpdateCustomizedPlayerSettings(evt.newValue);
         }
 
-        private void UpdateCustomizedPlayerSettings(bool useDefaultPlayerSettings)
+        private void UpdateCustomizedPlayerSettings(bool overrideDefaultPlayerSettings)
         {
-            m_CustomizedPlayerSettingsElement.SetEnabled(!useDefaultPlayerSettings);
+            m_CustomizedPlayerSettingsElement.SetEnabled(overrideDefaultPlayerSettings);
         }
 
         private void UpdateStartInFullScreen()
@@ -332,8 +332,8 @@ namespace Unity.DeviceSimulator
         public void Update(DeviceInfo deviceInfo)
         {
             m_DeviceInfo = deviceInfo;
-            UpdateDefaultPlayerSettingsStatus();
-            UpdateCustomizedPlayerSettings(m_UseDefaultPlayerSettings.value);
+            UpdateOverridePlayerSettingsStatus();
+            UpdateCustomizedPlayerSettings(m_OverrideDefaultPlayerSettings.value);
             UpdateStartInFullScreen();
             UpdateGraphicsAPI();
         }

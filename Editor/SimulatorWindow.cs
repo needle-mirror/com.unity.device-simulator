@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -100,7 +101,7 @@ namespace Unity.DeviceSimulator
 
             InitToolbar();
             m_ControlPanel = new
-                SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_ScreenSimulation, m_PlayerSettings.CurrentPlayerSettings);
+                SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, m_PlayerSettings.CurrentPlayerSettings);
             m_PreviewPanel = new SimulatorPreviewPanel(rootVisualElement.Q<VisualElement>("preview-panel"), m_InputProvider, CurrentDeviceInfo, m_SimulatorJsonSerialization)
             {
                 TargetOrientation = m_ScreenSimulation.orientation,
@@ -119,7 +120,14 @@ namespace Unity.DeviceSimulator
             m_ScreenSimulation.OnFullScreenChanged += OnFullScreenChanged;
 
             m_SystemInfoSimulation?.Dispose();
-            m_SystemInfoSimulation = new SystemInfoSimulation(CurrentDeviceInfo, playerSettings);
+
+            var settings = DeviceSimulatorSettingsProvider.LoadOrCreateSettings();
+            var whitelistedAssemblies = new List<string>(settings.SystemInfoAssemblies);
+
+            if (settings.SystemInfoDefaultAssembly)
+                whitelistedAssemblies.Add("Assembly-CSharp.dll");
+
+            m_SystemInfoSimulation = new SystemInfoSimulation(CurrentDeviceInfo, playerSettings, whitelistedAssemblies);
 
             DeviceSimulatorCallbacks.InvokeOnDeviceChange();
         }
@@ -188,7 +196,7 @@ namespace Unity.DeviceSimulator
                 rotationDegree = m_PreviewPanel.RotationDegree,
                 highlightSafeAreaEnabled = m_PreviewPanel.HighlightSafeAre,
                 friendlyName = CurrentDeviceInfo.Meta.friendlyName,
-                useDefaultPlayerSettings = m_PlayerSettings.UseDefaultPlayerSettings,
+                overrideDefaultPlayerSettings = m_PlayerSettings.OverrideDefaultPlayerSettings,
                 customizedPlayerSettings = m_PlayerSettings.CustomizedPlayerSettings
             };
 
@@ -318,7 +326,7 @@ namespace Unity.DeviceSimulator
         {
             InitSimulation();
 
-            m_ControlPanel.Update(CurrentDeviceInfo, m_ScreenSimulation, m_PlayerSettings.CurrentPlayerSettings);
+            m_ControlPanel.Update(CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, m_PlayerSettings.CurrentPlayerSettings);
             m_PreviewPanel.Update(CurrentDeviceInfo, m_ScreenSimulation.fullScreen);
             m_PlayerSettings.Update(CurrentDeviceInfo);
         }

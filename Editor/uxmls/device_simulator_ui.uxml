@@ -10,18 +10,20 @@
         <editor:ToolbarButton name="device-restart" text="Restart" />
     </editor:Toolbar>
     <editor:TwoPaneSplitView name="splitter" fixed-pane-initial-size="300" minimum-first-pane-size="235" minimum-second-pane-size="200">
-        <VisualElement class="unity-device-simulator__control-panel" name="control-panel">
-            <Foldout text="Device Specifications" value="true">
-                <Label class="unity-device-simulator__control-panel-label" text="OS: N/A" name="device_os" />
-                <Label class="unity-device-simulator__control-panel-label" text="Chipset: N/A" name="device_chipset" />
-                <Label class="unity-device-simulator__control-panel-label" text="CPU: N/A" name="device_cpu" />
-                <Label class="unity-device-simulator__control-panel-label" text="GPU: N/A" name="device_gpu" />
-                <Label class="unity-device-simulator__control-panel-label" text="Resolution: 0 x 0" name="device_resolution" />
-            </Foldout>
-            <Instance template="ScreenSettings" />
-            <!--<Foldout text="Device Specific Settings" />-->
-            <Instance template="PlayerSettings" />
-        </VisualElement>
+        <editor:Style src="../stylesheets/styles_split_view.uss"/>
+        <ScrollView mode="Vertical">
+            <VisualElement class="unity-device-simulator__control-panel" name="control-panel">
+                <Foldout class="unity-device-simulator__control-panel_foldout" text="Device Specifications" value="true">
+                    <Label class="unity-device-simulator__control-panel-label" text="OS: N/A" name="device_os" />
+                    <Label class="unity-device-simulator__control-panel-label" text="Chipset: N/A" name="device_chipset" />
+                    <Label class="unity-device-simulator__control-panel-label" text="CPU: N/A" name="device_cpu" />
+                    <Label class="unity-device-simulator__control-panel-label" text="GPU: N/A" name="device_gpu" />
+                    <Label class="unity-device-simulator__control-panel-label" text="Resolution: 0 x 0" name="device_resolution" />
+                </Foldout>
+                <Instance template="ScreenSettings" />
+                <Instance template="PlayerSettings" />
+            </VisualElement>
+        </ScrollView>
         <VisualElement name="preview-panel">
             <editor:Toolbar class="unity-device-simulator__preview-panel-toolbar" name="preview-toolbar">
                 <editor:ToolbarSpacer />
@@ -36,14 +38,14 @@
                 <VisualElement class="unity-toolbar-button unity-device-simulator__rotate-image-container" name="rotate-ccw">
                     <Image class="unity-device-simulator__rotate-ccw-image" name="rotate-ccw-image" />
                 </VisualElement>
-                <editor:ToolbarToggle text="Highlight Safe Area" name="highlight-safe-area"/>
+                <editor:ToolbarToggle text="Highlight Safe Area" name="highlight-safe-area" />
             </editor:Toolbar>
             <VisualElement class="unity-device-simulator__inactive-msg-container" name="inactive-msg-container">
                 <Label style="color:black" text="Simulator is currently not active." />
                 <Image class="unity-toolbar-button" style="width:16px; height:16px" name="close-inactive-msg" />
             </VisualElement>
             <VisualElement class="unity-device-simulator__scrollview-container" name="scrollview-container">
-                <ScrollView name="preview-scroll-view" mode="VerticalAndHorizontal">
+                <ScrollView class="unity-device-simulator__preview-scrollview" name="preview-scroll-view" mode="VerticalAndHorizontal">
                     <VisualElement class="unity-device-simulator__preview-container" name="preview-container">
                         <IMGUIContainer name="preview-imgui-renderer" />
                         <VisualElement name="preview-image-renderer" />

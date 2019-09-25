@@ -115,7 +115,7 @@ namespace Unity.DeviceSimulator
             #endregion
 
             #region Rotate
-            var namePostfix = EditorGUIUtility.isProSkin ? "_dark" : string.Empty;
+            var namePostfix = EditorGUIUtility.isProSkin ? "_dark" : "_light";
             const string iconPath = "packages/com.unity.device-simulator/Editor/icons";
 
             m_RootElement.Q<Image>("rotate-cw-image").image = AssetDatabase.LoadAssetAtPath<Texture2D>($"{iconPath}/rotate_cw{namePostfix}.png");
@@ -181,7 +181,7 @@ namespace Unity.DeviceSimulator
             var x = screenSize.x / m_BoundingBox.x;
             var y = screenSize.y / m_BoundingBox.y;
 
-            UpdateScale((int)Math.Floor(m_Scale * Math.Min(x, y)));
+            UpdateScale(ClampScale(Mathf.FloorToInt(m_Scale * Math.Min(x, y))));
         }
 
         private void UpdateScale(int newScale)
@@ -241,16 +241,21 @@ namespace Unity.DeviceSimulator
         private void OnScrollWheel(WheelEvent evt)
         {
             var newScale = (int)(m_Scale - evt.delta.y);
-            if (newScale < kScaleMin)
-                newScale = kScaleMin;
-            else if (newScale > kScaleMax)
-                newScale = kScaleMax;
-
-            UpdateScale(newScale);
+            UpdateScale(ClampScale(newScale));
             evt.StopPropagation();
 
             m_FitToScreenEnabled = false;
             m_FitToScreenToggle.SetValueWithoutNotify(m_FitToScreenEnabled);
+        }
+
+        private int ClampScale(int scale)
+        {
+            if (scale < kScaleMin)
+                return kScaleMin;
+            if (scale > kScaleMax)
+                return kScaleMax;
+
+            return scale;
         }
 
         private void OnGeometryChanged(GeometryChangedEvent evt)

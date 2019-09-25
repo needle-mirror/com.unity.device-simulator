@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <UXML xmlns="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements">
-    <Foldout text="Player Settings" value="true" name="player-settings">
-        <Toggle label="Use Player Settings" name="use-default-player-settings" value="true" />
+    <Foldout class="unity-device-simulator__control-panel_foldout" text="Player Settings" value="true" name="player-settings">
+        <Toggle label="Override Player Settings" name="override-default-player-settings" value="false" />
         <VisualElement name="customized-player-settings">
             <Toggle label="Start In Fullscreen" name="android-start-in-fullscreen" />
             <editor:EnumField style="width:270px" label="Resolution Scaling Mode" value="Center" name="resolution-scaling-mode" />

@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement class="settings-container">
+        <ui:Label text="Device Simulator" class="settings-title" />
+        <ui:Label text="SystemInfo simulation scope" class="section-title" />
+        <ui:Toggle label="Default assembly" binding-path="SystemInfoDefaultAssembly" class="flex-right" />
+        <ui:Label text="Custom assemblies" class="flex-right" />
+        <ui:ListView focusable="True" binding-path="SystemInfoAssemblies" item-height="20" class="assembly-list-view" />
+    </ui:VisualElement>
+</ui:UXML>

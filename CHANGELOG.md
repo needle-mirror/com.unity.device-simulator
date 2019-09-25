@@ -3,6 +3,21 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-preview] - 2019-09-26
+### Added
+- Project Settings -> Device Simulator
+- SystemInfo simulation from arbitrary assemblies. Assembly list in Project Settings
+- Spacer lines between foldouts in the control panel for visual clarity
+
+### Changed
+- "Use Player Settings" toggle was renamed to "Override Player Settings". Its function was also inverted
+- New device rotation icons
+
+### Fixed
+- Control panel now has a scroll view. UI elements no longer overlap each other when they don't fit
+- UI elements from control panel no longer bleed into device panel
+- Fixed "Layout update is struggling to process current layout (consider simplifying to avoid recursive layout)" error
+
 ## [1.0.0-preview] - 2019-09-23
 ### Added
 - Simulating SystemInfo if called directly from Assembly-CSharp

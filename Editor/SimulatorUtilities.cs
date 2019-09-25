@@ -53,7 +53,7 @@ namespace Unity.DeviceSimulator
         [NonSerialized]
         public Quaternion rotation = Quaternion.identity;
         public string friendlyName = string.Empty;
-        public bool useDefaultPlayerSettings = true;
+        public bool overrideDefaultPlayerSettings = false;
         public SimulationPlayerSettings customizedPlayerSettings = null;
     }
 

@@ -1,3 +1,5 @@
+using System.Linq;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
@@ -15,16 +17,12 @@ namespace Unity.DeviceSimulator
 
         private SimulatorScreenSettingsUI m_SimulatorScreenSettings = null;
 
-        public SimulatorControlPanel(VisualElement rootElement, DeviceInfo deviceInfo, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
+        public SimulatorControlPanel(VisualElement rootElement, DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
         {
             m_RootElement = rootElement;
-            Init(deviceInfo, screenSimulation, playerSettings);
-        }
 
-        private void Init(DeviceInfo deviceInfo, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
-        {
             InitDeviceSpecifications();
-            UpdateDeviceSpecifications(deviceInfo);
+            UpdateDeviceSpecifications(deviceInfo, systemInfoSimulation);
 
             m_SimulatorScreenSettings = new SimulatorScreenSettingsUI(m_RootElement.Q<VisualElement>("screen-settings"), deviceInfo, screenSimulation, playerSettings);
 
@@ -49,6 +47,7 @@ namespace Unity.DeviceSimulator
                     text = extension.extensionTitle,
                     value = false
                 };
+                foldout.AddToClassList("unity-device-simulator__control-panel_foldout");
 
                 m_RootElement.Add(foldout);
                 extension.OnExtendDeviceSimulator(foldout);
@@ -56,20 +55,20 @@ namespace Unity.DeviceSimulator
         }
 
         // Only gets called during initialization and switching device.
-        public void Update(DeviceInfo deviceInfo, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
+        public void Update(DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
         {
             if (deviceInfo == null)
                 return;
 
-            UpdateDeviceSpecifications(deviceInfo);
+            UpdateDeviceSpecifications(deviceInfo, systemInfoSimulation);
             m_SimulatorScreenSettings.Update(deviceInfo, screenSimulation, playerSettings);
         }
 
-        private void UpdateDeviceSpecifications(DeviceInfo deviceInfo)
+        private void UpdateDeviceSpecifications(DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation)
         {
             m_OS.text = "OS: " + (string.IsNullOrEmpty(deviceInfo.SystemInfo.operatingSystem) ? "N/A" : deviceInfo.SystemInfo.operatingSystem);
             m_CPU.text = "CPU: " + (string.IsNullOrEmpty(deviceInfo.SystemInfo.processorType) ? "N/A" : deviceInfo.SystemInfo.processorType);
-            m_GPU.text = "GPU: " + (deviceInfo.SystemInfo.GraphicsDependentData == null ? "N/A" : deviceInfo.SystemInfo.GraphicsDependentData[0].graphicsDeviceType.ToString());
+            m_GPU.text = "GPU: " + systemInfoSimulation.GraphicsDependentData.graphicsDeviceType;
             m_Resolution.text = $"Resolution: {deviceInfo.Screens[0].width} x {deviceInfo.Screens[0].height}";
         }
     }

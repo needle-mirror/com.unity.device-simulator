@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <UXML xmlns="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements">
-    <Foldout text="Screen Settings" value="true" name="screen-settings">
+    <Foldout class="unity-device-simulator__control-panel_foldout" text="Screen Settings" value="true" name="screen-settings">
         <VisualElement name="screen-set-resolution-field" style="flex-direction:row;">
             <Label text="Resolution" style="-unity-text-align:middle-left; width: 77px" />
             <editor:IntegerField class="unity-device-simulator__screen-resolution-field" name="screen-width" max-length="4" />
