@@ -3,14 +3,18 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.2.0-preview] - 2019-10-11
+### Added
+- `Preferences -> Device Simulator` to set the customized devicee directory
+
 ## [1.1.0-preview] - 2019-09-26
 ### Added
-- Project Settings -> Device Simulator
+- `Project Settings -> Device Simulator`
 - SystemInfo simulation from arbitrary assemblies. Assembly list in Project Settings
 - Spacer lines between foldouts in the control panel for visual clarity
 
 ### Changed
-- "Use Player Settings" toggle was renamed to "Override Player Settings". Its function was also inverted
+- `Use Player Settings` toggle was renamed to `Override Player Settings`. Its function was also inverted
 - New device rotation icons
 
 ### Fixed

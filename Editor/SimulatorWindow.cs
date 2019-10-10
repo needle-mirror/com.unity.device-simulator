@@ -22,9 +22,19 @@ namespace Unity.DeviceSimulator
         private InputProvider m_InputProvider;
 
         private DeviceDatabase m_DeviceDatabase;
-        private DeviceInfo[] m_Devices;
-        private int m_CurrentDeviceInfoIndex = -1;
-        private DeviceInfo CurrentDeviceInfo => m_Devices[m_CurrentDeviceInfoIndex];
+        private DeviceHandle[] m_DeviceHandles;
+        private int CurrentDeviceHandleIndex
+        {
+            get => m_CurrentDeviceHandleIndex;
+            set
+            {
+                m_CurrentDeviceHandleIndex = value;
+                CurrentDeviceInfo = m_DeviceDatabase.GetDevice(m_DeviceHandles[value]);
+            }
+        }
+
+        private int m_CurrentDeviceHandleIndex = -1;
+        private DeviceInfo CurrentDeviceInfo;
 
         private SimulatorJsonSerialization m_SimulatorJsonSerialization = null;
 
@@ -108,6 +118,8 @@ namespace Unity.DeviceSimulator
                 IsFullScreen = m_ScreenSimulation.fullScreen,
                 OnPreview = this.RenderView
             };
+
+            EditorApplication.playModeStateChanged += OnEditorPlayModeStateChanged;
         }
 
         private void InitSimulation()
@@ -121,7 +133,7 @@ namespace Unity.DeviceSimulator
 
             m_SystemInfoSimulation?.Dispose();
 
-            var settings = DeviceSimulatorSettingsProvider.LoadOrCreateSettings();
+            var settings = DeviceSimulatorProjectSettingsProvider.LoadOrCreateSettings();
             var whitelistedAssemblies = new List<string>(settings.SystemInfoAssemblies);
 
             if (settings.SystemInfoDefaultAssembly)
@@ -171,6 +183,17 @@ namespace Unity.DeviceSimulator
             SaveStates();
             m_ScreenSimulation.Dispose();
             m_SystemInfoSimulation.Dispose();
+            EditorApplication.playModeStateChanged -= OnEditorPlayModeStateChanged;
+        }
+
+        private void OnEditorPlayModeStateChanged(PlayModeStateChange state)
+        {
+            // Here we register a callback for play mode state change to reinitialize the overlay image.
+            if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                CurrentDeviceInfo.LoadOverlayImage(m_DeviceHandles[CurrentDeviceHandleIndex]);
+                OnStateChanged();
+            }
         }
 
         private void OnStateChanged()
@@ -246,10 +269,10 @@ namespace Unity.DeviceSimulator
         private void InitDeviceInfoList()
         {
             m_DeviceDatabase = new DeviceDatabase();
-            m_Devices = m_DeviceDatabase.GetDevices();
+            m_DeviceHandles = m_DeviceDatabase.GetDeviceHandles();
 
-            Assert.AreNotEqual(0, m_Devices.Length, "No devices found!");
-            m_CurrentDeviceInfoIndex = 0;
+            Assert.AreNotEqual(0, m_DeviceHandles.Length, "No devices found!");
+            CurrentDeviceHandleIndex = 0;
         }
 
         void SetCurrentDeviceIndex()
@@ -257,11 +280,11 @@ namespace Unity.DeviceSimulator
             if (m_SimulatorJsonSerialization == null)
                 return;
 
-            for (int index = 0; index < m_Devices.Length; ++index)
+            for (int index = 0; index < m_DeviceHandles.Length; ++index)
             {
-                if (m_Devices[index].Meta.friendlyName == m_SimulatorJsonSerialization.friendlyName)
+                if (m_DeviceHandles[index].Name == m_SimulatorJsonSerialization.friendlyName)
                 {
-                    m_CurrentDeviceInfoIndex = index;
+                    CurrentDeviceHandleIndex = index;
                     break;
                 }
             }
@@ -301,10 +324,10 @@ namespace Unity.DeviceSimulator
             if (index < 0)
                 return;
 
-            if (m_CurrentDeviceInfoIndex == index)
+            if (CurrentDeviceHandleIndex == index)
                 return;
 
-            m_CurrentDeviceInfoIndex = index;
+            CurrentDeviceHandleIndex = index;
             m_DeviceInfoMenu.menu.MenuItems().Clear();
             m_DeviceInfoMenu.text = CurrentDeviceInfo.Meta.friendlyName;
             UpdateDeviceInfoMenu();
@@ -315,10 +338,10 @@ namespace Unity.DeviceSimulator
 
         private void UpdateDeviceInfoMenu()
         {
-            foreach (var deviceInfo in m_Devices)
+            foreach (var deviceHandle in m_DeviceHandles)
             {
-                var status = (deviceInfo.Meta.friendlyName == CurrentDeviceInfo.Meta.friendlyName) ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal;
-                m_DeviceInfoMenu.menu.AppendAction(deviceInfo.Meta.friendlyName, HandleDeviceSelection, HandleDeviceSelection => status);
+                var status = (deviceHandle.Name == CurrentDeviceInfo.Meta.friendlyName) ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal;
+                m_DeviceInfoMenu.menu.AppendAction(deviceHandle.Name, HandleDeviceSelection, HandleDeviceSelection => status);
             }
         }
 

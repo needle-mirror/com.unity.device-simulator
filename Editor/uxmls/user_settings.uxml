@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:VisualElement>
+        <uie:Style src="../stylesheets/styles_settings.uss" />
+        <ui:VisualElement class="settings-container">
+            <ui:Label text="Device Simulator" class="settings-title" />
+            <ui:Label text="Device Directory" class="section-title" />
+            <ui:VisualElement class="user-device-directory-container">
+                <ui:TextField class="user-device-directory-field" label="Directory" name="customized-device-directory" />
+                <ui:Button text="Browse" class="user-device-directory-button" name="set-customized-device-directory" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

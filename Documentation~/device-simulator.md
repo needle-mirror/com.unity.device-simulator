@@ -68,7 +68,14 @@ Device Simulator Player Settings override the real [Player Settings](https://doc
 
 **Use Player Settings** controls whether the real or simulated Player Settings are used.
 
+#### 11. Preferences
+You can access Device Simulator preferences by menu **Edit \> Preferences \> Device Simulator**, where you can
+- Set the customized device directory, please make sure your device json files end with ".device.json".  
+  Please reopen the Device Simulator window after setting the customized device directory.
+
 ## Document revision history
 |Date|Reason|
 |---|---|
+|Oct 11, 2019|Document Updated. Matches package version 1.2.0-preview|
+|Sep 26, 2019|Document Updated. Matches package version 1.1.0-preview|
 |Sep 23, 2019|Document Updated. Matches package version 1.0.0-preview|

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -73,6 +74,27 @@ namespace Unity.DeviceSimulator
         public static bool IsGivenDevice(this DeviceInfo deviceInfo, string os)
         {
             return (deviceInfo?.SystemInfo != null) ? deviceInfo.SystemInfo.operatingSystem.ToLower().Contains(os) : false;
+        }
+
+        public static bool LoadOverlayImage(this DeviceInfo deviceInfo, DeviceHandle handle)
+        {
+            if (deviceInfo.Meta.overlayImage != null)
+                return true;
+
+            if (string.IsNullOrEmpty(deviceInfo.Meta.overlay))
+                return false;
+
+            var overlayBytes = File.ReadAllBytes(Path.Combine(handle.Directory, deviceInfo.Meta.overlay));
+            var texture = new Texture2D(2, 2, TextureFormat.Alpha8, false)
+            {
+                alphaIsTransparency = true
+            };
+
+            if (!texture.LoadImage(overlayBytes, false))
+                return false;
+
+            deviceInfo.Meta.overlayImage = texture;
+            return true;
         }
 
         #endregion
