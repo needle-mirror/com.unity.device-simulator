@@ -94,7 +94,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations, screenWidth, screenHeight, screenDpi);
             var testWindow = new TestWindow();
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), testWindow);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), testWindow);
 
             if (screenDpi >= scaledDpi)
             {
@@ -129,7 +129,7 @@ namespace Tests
             PlayerSettings.allowedAutorotateToLandscapeRight = true;
 
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[orientation];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_TestWindow);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_TestWindow);
             Assert.AreEqual(orientation, Screen.orientation);
         }
 
@@ -143,7 +143,7 @@ namespace Tests
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[orientation];
 
             PlayerSettings.defaultInterfaceOrientation = ScreenTestUtilities.ScreenOrientationToUI[orientation];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_TestWindow);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_TestWindow);
 
             Assert.AreEqual(orientation, Screen.orientation);
         }
@@ -169,7 +169,7 @@ namespace Tests
             PlayerSettings.allowedAutorotateToLandscapeLeft = landscapeLeft;
             PlayerSettings.allowedAutorotateToLandscapeRight = landscapeRight;
 
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_TestWindow);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_TestWindow);
 
             Assert.AreEqual(portrait, Screen.autorotateToPortrait);
             Assert.AreEqual(portraitUpsideDown, Screen.autorotateToPortraitUpsideDown);

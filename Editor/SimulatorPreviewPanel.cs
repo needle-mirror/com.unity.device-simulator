@@ -6,13 +6,17 @@ using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
 {
-    internal class SimulatorPreviewPanel : IDisposable
+    internal class SimulatorPreviewPanel
     {
         private VisualElement m_RootElement = null;
         private InputProvider m_InputProvider = null;
         private DeviceInfo m_DeviceInfo = null;
 
         public Func<Vector2, bool, RenderTexture> OnPreview { get; set; }
+
+        public Action<bool> OnControlPanelHiddenChanged { get; set; }
+
+        private bool m_ControlPanelHidden = false;
 
         private int m_Scale = 20; // Value from (0, 100].
         private const int kScaleMin = 10;
@@ -23,6 +27,8 @@ namespace Unity.DeviceSimulator
         private Quaternion m_Rotation = Quaternion.identity;
 
         private bool m_HighlightSafeArea = false;
+        private Color m_HighlightSafeAreaColor = Color.green;
+        private int m_HighlightSafeAreaLineWidth = 2;
 
         public int Scale => m_Scale;
         public bool FitToScreenEnabled => m_FitToScreenEnabled;
@@ -31,6 +37,7 @@ namespace Unity.DeviceSimulator
         public bool HighlightSafeAre => m_HighlightSafeArea;
 
         // Controls for preview toolbar.
+        private ToolbarButton m_HideControlPanel = null;
         private SliderInt m_ScaleSlider = null;
         private Label m_ScaleValueLabel = null;
         private ToolbarToggle m_FitToScreenToggle = null;
@@ -40,9 +47,11 @@ namespace Unity.DeviceSimulator
 
         // Controls for preview.
         private VisualElement m_ScrollViewContainer = null;
-        private VisualElement m_PreviewImageRenderer = null;
+        private VisualElement m_ScrollView = null;
+        private IMGUIContainer m_PreviewRenderer = null;
         private RenderTexture m_PreviewImage = null;
         private Material m_PreviewMaterial = null;
+        private Material m_DeviceMaterial = null;
 
         private Vector2 m_BoundingBox = Vector2.zero;
         private Vector2 m_Offset = Vector2.zero;
@@ -58,25 +67,12 @@ namespace Unity.DeviceSimulator
             m_RootElement = rootElement;
             m_InputProvider = inputProvider;
             m_DeviceInfo = deviceInfo;
-            EditorApplication.playModeStateChanged += OnEditorPlayModeStateChanged;
+
+            var userSettings = DeviceSimulatorUserSettingsProvider.LoadOrCreateSettings();
+            m_HighlightSafeAreaColor = userSettings.SafeAreaHighlightColor;
+            m_HighlightSafeAreaLineWidth = userSettings.SafeAreaHighlightLineWidth;
 
             Init(states);
-        }
-
-        public void Dispose()
-        {
-            EditorApplication.playModeStateChanged -= OnEditorPlayModeStateChanged;
-        }
-
-        private void OnEditorPlayModeStateChanged(PlayModeStateChange state)
-        {
-            // Workaround for issue https://github.com/Unity-Technologies/com.unity.device-simulator/issues/35.
-            // Here we register a callback for play mode state change to reinitialize the preview material and trigger a repaint.
-            if (state == PlayModeStateChange.EnteredEditMode)
-            {
-                m_PreviewMaterial = new Material(Shader.Find("Hidden/DeviceSimulator/Preview"));
-                m_PreviewImageRenderer.MarkDirtyRepaint();
-            }
         }
 
         private void Init(SimulatorJsonSerialization states)
@@ -99,6 +95,10 @@ namespace Unity.DeviceSimulator
 
         private void InitPreviewToolbar()
         {
+            m_HideControlPanel = m_RootElement.Q<ToolbarButton>("hide-control-panel");
+            m_HideControlPanel.style.backgroundImage = (Texture2D)EditorGUIUtility.Load("Icons/d_tab_prev@2x.png");
+            m_HideControlPanel.clickable = new Clickable(HideControlPanel);
+
             #region Scale
             m_ScaleSlider = m_RootElement.Q<SliderInt>("scale-slider");
             m_ScaleSlider.lowValue = kScaleMin;
@@ -131,6 +131,14 @@ namespace Unity.DeviceSimulator
             highlightSafeAreaToggle.SetValueWithoutNotify(m_HighlightSafeArea);
         }
 
+        private void HideControlPanel()
+        {
+            m_ControlPanelHidden = !m_ControlPanelHidden;
+
+            m_HideControlPanel.style.backgroundImage = (Texture2D)EditorGUIUtility.Load($"Icons/d_tab_{(m_ControlPanelHidden ? "next" : "prev")}@2x.png");
+            OnControlPanelHiddenChanged?.Invoke(m_ControlPanelHidden);
+        }
+
         private void InitInactiveMsg()
         {
             m_InactiveMsgContainer = m_RootElement.Q<VisualElement>("inactive-msg-container");
@@ -147,17 +155,11 @@ namespace Unity.DeviceSimulator
             m_ScrollViewContainer.RegisterCallback<WheelEvent>(OnScrollWheel, TrickleDown.TrickleDown);
             m_ScrollViewContainer.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
-            var imguiContainer = m_RootElement.Q<IMGUIContainer>("preview-imgui-renderer");
-            imguiContainer.onGUIHandler = OnIMGUIRendered;
+            m_ScrollView = m_RootElement.Q<ScrollView>("preview-scroll-view");
 
-            m_PreviewImageRenderer = m_RootElement.Q<VisualElement>("preview-image-renderer");
-            m_PreviewImageRenderer.generateVisualContent += DrawPreviewImage;
-            m_PreviewImageRenderer.generateVisualContent += DrawDeviceImage;
-            m_PreviewImageRenderer.generateVisualContent += DrawHighlightSafeArea;
-
-            m_PreviewImageRenderer.AddManipulator(m_TouchEventManipulator = new TouchEventManipulator(m_InputProvider));
-
-            m_PreviewMaterial = new Material(Shader.Find("Hidden/DeviceSimulator/Preview"));
+            m_PreviewRenderer = m_RootElement.Q<IMGUIContainer>("preview-imgui-renderer");
+            m_PreviewRenderer.onGUIHandler = OnIMGUIRendered;
+            m_PreviewRenderer.AddManipulator(m_TouchEventManipulator = new TouchEventManipulator(m_InputProvider));
         }
 
         private void SetScale(ChangeEvent<int> e)
@@ -258,41 +260,30 @@ namespace Unity.DeviceSimulator
             return scale;
         }
 
+        public void OnStateChanged()
+        {
+            m_PreviewRenderer.MarkDirtyRepaint();
+
+            ComputeBoundingBox();
+            SetScrollViewTopPadding();
+        }
+
         private void OnGeometryChanged(GeometryChangedEvent evt)
         {
             if (m_FitToScreenEnabled)
                 FitToScreenScale();
+
+            SetScrollViewTopPadding();
         }
 
-        private void DrawPreviewImage(MeshGenerationContext mgc)
+        // This is a workaround to fix https://github.com/Unity-Technologies/com.unity.device-simulator/issues/79.
+        private void SetScrollViewTopPadding()
         {
-            if (m_PreviewImage == null)
+            var scrollViewHeight = m_ScrollView.worldBound.height;
+            if (float.IsNaN(scrollViewHeight))
                 return;
 
-            ComputePreviewImageHalfSizeAndOffset(out Vector2 halfSize, out Vector2 offset);
-
-            var meshWriteData = mgc.Allocate(4, 6, m_PreviewImage, m_PreviewMaterial, MeshGenerationContext.MeshFlags.None);
-
-            var vertices = new Vertex[4];
-            vertices[0].position = new Vector3(-halfSize.x, -halfSize.y, Vertex.nearZ);
-            vertices[0].tint = Color.white;
-
-            vertices[1].position = new Vector3(halfSize.x, -halfSize.y, Vertex.nearZ);
-            vertices[1].tint = Color.white;
-
-            vertices[2].position = new Vector3(halfSize.x, halfSize.y, Vertex.nearZ);
-            vertices[2].tint = Color.white;
-
-            vertices[3].position = new Vector3(-halfSize.x, halfSize.y, Vertex.nearZ);
-            vertices[3].tint = Color.white;
-
-            SimulatorUtilities.SetTextureCoordinates(TargetOrientation, vertices);
-            SimulatorUtilities.TransformVertices(m_Rotation, offset, vertices);
-
-            meshWriteData.SetAllVertices(vertices);
-
-            var indices = new ushort[] { 0, 3, 1, 1, 3, 2 };
-            meshWriteData.SetAllIndices(indices);
+            m_ScrollView.style.paddingTop = scrollViewHeight > m_BoundingBox.y ? (scrollViewHeight - m_BoundingBox.y) / 2 : 0;
         }
 
         private void ComputePreviewImageHalfSizeAndOffset(out Vector2 halfSize, out Vector2 offset)
@@ -429,137 +420,6 @@ namespace Unity.DeviceSimulator
             return tempOffset;
         }
 
-        private void DrawDeviceImage(MeshGenerationContext mgc)
-        {
-            if (m_DeviceInfo.Meta.overlayImage == null)
-            {
-                DrawDeviceBorder(mgc);
-                return;
-            }
-
-            var scale = m_Scale / 100f;
-            var halfImageWidth = scale * m_DeviceInfo.Screens[0].width / 2;
-            var halfImageHeight = scale * m_DeviceInfo.Screens[0].height / 2;
-
-            var leftWidth = halfImageWidth + scale * m_DeviceInfo.Meta.overlayOffset.x;
-            var topWidth = halfImageHeight + scale * m_DeviceInfo.Meta.overlayOffset.y;
-            var rightWidth = halfImageWidth + scale * m_DeviceInfo.Meta.overlayOffset.z;
-            var bottomWidth = halfImageHeight + scale * m_DeviceInfo.Meta.overlayOffset.w;
-
-            var meshWriteData = mgc.Allocate(4, 6, m_DeviceInfo.Meta.overlayImage);
-
-            var vertices = new Vertex[4];
-            vertices[0].position = new Vector3(-leftWidth, -topWidth, Vertex.nearZ);
-            vertices[0].tint = Color.white;
-            vertices[0].uv = new Vector2(0, 1);
-
-            vertices[1].position = new Vector3(rightWidth, -topWidth, Vertex.nearZ);
-            vertices[1].tint = Color.white;
-            vertices[1].uv = new Vector2(1, 1);
-
-            vertices[2].position = new Vector3(rightWidth, bottomWidth, Vertex.nearZ);
-            vertices[2].tint = Color.white;
-            vertices[2].uv = new Vector2(1, 0);
-
-            vertices[3].position = new Vector3(-leftWidth, bottomWidth, Vertex.nearZ);
-            vertices[3].tint = Color.white;
-            vertices[3].uv = new Vector2(0, 0);
-
-            SimulatorUtilities.TransformVertices(m_Rotation, m_Offset, vertices);
-
-            meshWriteData.SetAllVertices(vertices);
-
-            var indices = new ushort[] { 0, 3, 1, 1, 3, 2 };
-            meshWriteData.SetAllIndices(indices);
-        }
-
-        private void DrawDeviceBorder(MeshGenerationContext mgc)
-        {
-            // For now, we draw device as borders. We can draw device image in the future.
-            var scale = m_Scale / 100f;
-            var halfImageWidth = scale * m_DeviceInfo.Screens[0].width / 2;
-            var halfImageHeight = scale * m_DeviceInfo.Screens[0].height / 2;
-
-            var leftOuterWidth = halfImageWidth + scale * m_DeviceInfo.Meta.overlayOffset.x;
-            var topOuterWidth = halfImageHeight + scale * m_DeviceInfo.Meta.overlayOffset.y;
-            var rightOuterWidth = halfImageWidth + scale * m_DeviceInfo.Meta.overlayOffset.z;
-            var bottomOuterWidth = halfImageHeight + scale * m_DeviceInfo.Meta.overlayOffset.w;
-
-            var padding = 20 * scale;
-            var leftInnerWidth = leftOuterWidth - padding;
-            var topInnerWidth = topOuterWidth - padding;
-            var rightInnerWidth = rightOuterWidth - padding;
-            var bottomInnerWidth = bottomOuterWidth - padding;
-
-            var outerColor = EditorGUIUtility.isProSkin ? new Color(217f / 255, 217f / 255, 217f / 255) : new Color(100f / 255, 100f / 255, 100f / 255);
-            var innerColor = new Color(41f / 255, 41f / 255, 41f / 255);
-
-            const int vertexCount = 16, indexCount = 48;
-            var meshWriteData = mgc.Allocate(vertexCount, indexCount);
-            var vertices = new Vertex[vertexCount];
-
-            // Outer border.
-            vertices[0].position = new Vector3(-leftOuterWidth, -topOuterWidth, Vertex.nearZ);
-            vertices[0].tint = outerColor;
-
-            vertices[1].position = new Vector3(rightOuterWidth, -topOuterWidth, Vertex.nearZ);
-            vertices[1].tint = outerColor;
-
-            vertices[2].position = new Vector3(rightOuterWidth, bottomOuterWidth, Vertex.nearZ);
-            vertices[2].tint = outerColor;
-
-            vertices[3].position = new Vector3(-leftOuterWidth, bottomOuterWidth, Vertex.nearZ);
-            vertices[3].tint = outerColor;
-
-            vertices[4].position = new Vector3(-leftInnerWidth, -topInnerWidth, Vertex.nearZ);
-            vertices[4].tint = outerColor;
-
-            vertices[5].position = new Vector3(rightInnerWidth, -topInnerWidth, Vertex.nearZ);
-            vertices[5].tint = outerColor;
-
-            vertices[6].position = new Vector3(rightInnerWidth, bottomInnerWidth, Vertex.nearZ);
-            vertices[6].tint = outerColor;
-
-            vertices[7].position = new Vector3(-leftInnerWidth, bottomInnerWidth, Vertex.nearZ);
-            vertices[7].tint = outerColor;
-
-            //Inner border.
-            vertices[8].position = vertices[4].position;
-            vertices[8].tint = innerColor;
-
-            vertices[9].position = vertices[5].position;
-            vertices[9].tint = innerColor;
-
-            vertices[10].position = vertices[6].position;
-            vertices[10].tint = innerColor;
-
-            vertices[11].position = vertices[7].position;
-            vertices[11].tint = innerColor;
-
-            vertices[12].position = new Vector3(-halfImageWidth, -halfImageHeight, Vertex.nearZ);
-            vertices[12].tint = innerColor;
-
-            vertices[13].position = new Vector3(halfImageWidth, -halfImageHeight, Vertex.nearZ);
-            vertices[13].tint = innerColor;
-
-            vertices[14].position = new Vector3(halfImageWidth, halfImageHeight, Vertex.nearZ);
-            vertices[14].tint = innerColor;
-
-            vertices[15].position = new Vector3(-halfImageWidth, halfImageHeight, Vertex.nearZ);
-            vertices[15].tint = innerColor;
-
-            SimulatorUtilities.TransformVertices(m_Rotation, m_Offset, vertices);
-
-            meshWriteData.SetAllVertices(vertices);
-
-            var indices = new ushort[]
-            {
-                0, 4, 1,  1, 4, 5,   1, 5, 6,   1, 6, 2,   6, 7, 2,    7, 3, 2,    0, 3, 4,   3, 7, 4, // Outer
-                8, 12, 9, 9, 12, 13, 9, 13, 14, 9, 14, 10, 14, 15, 10, 15, 11, 10, 8, 11, 12, 11, 15, 12 // Inner
-            };
-            meshWriteData.SetAllIndices(indices);
-        }
-
         private Rect GetSafeAreaInScreen()
         {
             var sa = m_DeviceInfo.Screens[0].orientations[TargetOrientation].safeArea;
@@ -573,60 +433,6 @@ namespace Unity.DeviceSimulator
 
             var scale = m_Scale / 100f;
             return new Rect(0, 0, sa.width * scale, sa.height * scale);
-        }
-
-        private void DrawHighlightSafeArea(MeshGenerationContext mgc)
-        {
-            if (!m_HighlightSafeArea)
-                return;
-
-            var safeAreaInScreen = GetSafeAreaInScreen();
-            var halfImageWidth = safeAreaInScreen.width / 2;
-            var halfImageHeight = safeAreaInScreen.height / 2;
-
-            const int vertexCount = 8, indexCount = 24;
-            var meshWriteData = mgc.Allocate(vertexCount, indexCount);
-            var vertices = new Vertex[vertexCount];
-
-            var highlightColor = Color.green;
-            const int highlightLineWidth = 2;
-
-            vertices[0].position = new Vector3(-halfImageWidth, -halfImageHeight, Vertex.nearZ);
-            vertices[0].tint = highlightColor;
-
-            vertices[1].position = new Vector3(halfImageWidth, -halfImageHeight, Vertex.nearZ);
-            vertices[1].tint = highlightColor;
-
-            vertices[2].position = new Vector3(halfImageWidth, halfImageHeight, Vertex.nearZ);
-            vertices[2].tint = highlightColor;
-
-            vertices[3].position = new Vector3(-halfImageWidth, halfImageHeight, Vertex.nearZ);
-            vertices[3].tint = highlightColor;
-
-            vertices[4].position = new Vector3(-halfImageWidth + highlightLineWidth, -halfImageHeight + highlightLineWidth, Vertex.nearZ);
-            vertices[4].tint = highlightColor;
-
-            vertices[5].position = new Vector3(halfImageWidth - highlightLineWidth, -halfImageHeight + highlightLineWidth, Vertex.nearZ);
-            vertices[5].tint = highlightColor;
-
-            vertices[6].position = new Vector3(halfImageWidth - highlightLineWidth, halfImageHeight - highlightLineWidth, Vertex.nearZ);
-            vertices[6].tint = highlightColor;
-
-            vertices[7].position = new Vector3(-halfImageWidth + highlightLineWidth, halfImageHeight - highlightLineWidth, Vertex.nearZ);
-            vertices[7].tint = highlightColor;
-
-            var offset = new Vector2(m_Offset.x + safeAreaInScreen.x / 2, m_Offset.y + safeAreaInScreen.y / 2);
-            offset = ComputeOffsetForScreenMode(offset, true);
-
-            SimulatorUtilities.TransformVertices(ComputeRotationForHighlightSafeArea(), offset, vertices);
-
-            meshWriteData.SetAllVertices(vertices);
-
-            var indices = new ushort[]
-            {
-                0, 4, 1, 1, 4, 5, 1, 5, 6, 1, 6, 2, 6, 7, 2, 7, 3, 2, 0, 3, 4, 3, 7, 4
-            };
-            meshWriteData.SetAllIndices(indices);
         }
 
         private Quaternion ComputeRotationForHighlightSafeArea()
@@ -662,7 +468,13 @@ namespace Unity.DeviceSimulator
             {
                 var renderTexture = OnPreview(Event.current.mousePosition, false);
                 if (renderTexture.IsCreated())
+                {
                     m_PreviewImage = renderTexture;
+                    LoadResources();
+                    RenderPreviewImage();
+                    RenderDeviceImage();
+                    RenderSafeArea();
+                }
             }
 
             if (type != EventType.Repaint && type != EventType.Layout && type != EventType.Used)
@@ -682,6 +494,170 @@ namespace Unity.DeviceSimulator
             }
         }
 
+        private void LoadResources()
+        {
+            if (m_PreviewMaterial == null)
+                m_PreviewMaterial = GUI.blitMaterial;
+            if (m_DeviceMaterial == null)
+                m_DeviceMaterial = new Material(Shader.Find("Hidden/Internal-GUITextureClip"));
+            m_DeviceInfo.LoadOverlayImage();
+        }
+
+        private static readonly float zValue = Vertex.nearZ;
+
+        private void RenderPreviewImage()
+        {
+            if (m_PreviewImage == null)
+                return;
+
+            ComputePreviewImageHalfSizeAndOffset(out Vector2 halfSize, out Vector2 offset);
+
+            var vertices = new Vector3[4];
+            vertices[0] = new Vector3(-halfSize.x, -halfSize.y, zValue);
+            vertices[1] = new Vector3(halfSize.x, -halfSize.y, zValue);
+            vertices[2] = new Vector3(halfSize.x, halfSize.y, zValue);
+            vertices[3] = new Vector3(-halfSize.x, halfSize.y, zValue);
+
+            var uvs = new Vector2[4];
+            SimulatorUtilities.SetTextureCoordinates(TargetOrientation, uvs);
+
+            var mesh = new Mesh()
+            {
+                vertices = vertices,
+                uv = uvs,
+                triangles = new[] { 0, 1, 3, 1, 2, 3 }
+            };
+
+            m_PreviewMaterial.mainTexture = m_PreviewImage;
+            m_PreviewMaterial.SetPass(0);
+
+            var transformMatrix = Matrix4x4.TRS(new Vector3(offset.x, offset.y), m_Rotation, Vector3.one);
+            Graphics.DrawMeshNow(mesh, transformMatrix);
+        }
+
+        private void RenderDeviceImage()
+        {
+            if (m_DeviceInfo.Meta.overlayImage == null)
+            {
+                RenderDeviceBorder();
+                return;
+            }
+
+            var rect = new Vector4(m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height, m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height);
+            rect = (rect / 2 + m_DeviceInfo.Meta.overlayOffset);
+
+            var vertices = new Vector3[4];
+            vertices[0] = new Vector3(-rect.x, -rect.y, zValue);
+            vertices[1] = new Vector3(rect.z, -rect.y, zValue);
+            vertices[2] = new Vector3(rect.z, rect.w, zValue);
+            vertices[3] = new Vector3(-rect.x, rect.w, zValue);
+
+            var mesh = new Mesh()
+            {
+                vertices = vertices,
+                uv = new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) },
+                triangles = new[] { 0, 1, 3, 1, 2, 3 }
+            };
+
+            m_DeviceMaterial.mainTexture = m_DeviceInfo.Meta.overlayImage;
+            m_DeviceMaterial.SetPass(0);
+
+            var transformMatrix = Matrix4x4.TRS(new Vector3(m_Offset.x, m_Offset.y), m_Rotation, new Vector3(m_Scale / 100f, m_Scale / 100f));
+            Graphics.DrawMeshNow(mesh, transformMatrix);
+        }
+
+        private void RenderDeviceBorder()
+        {
+            // Fallback to draw borders if no overlay image presents.
+            var deviceRect = new Vector4(m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height, m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height) / 2;
+            var outerRect = (deviceRect + m_DeviceInfo.Meta.overlayOffset);
+
+            const float padding = 20;
+            var innerRect = outerRect - new Vector4(padding, padding, padding, padding);
+
+            var vertices = new Vector3[16];
+            // Outer border.
+            vertices[0] = new Vector3(-outerRect.x, -outerRect.y, zValue);
+            vertices[1] = new Vector3(outerRect.z, -outerRect.y, zValue);
+            vertices[2] = new Vector3(outerRect.z, outerRect.w, zValue);
+            vertices[3] = new Vector3(-outerRect.x, outerRect.w, zValue);
+            vertices[4] = new Vector3(-innerRect.x, -innerRect.y, zValue);
+            vertices[5] = new Vector3(innerRect.z, -innerRect.y, zValue);
+            vertices[6] = new Vector3(innerRect.z, innerRect.w, zValue);
+            vertices[7] = new Vector3(-innerRect.x, innerRect.w, zValue);
+
+            //Inner border.
+            vertices[8] = vertices[4];
+            vertices[9] = vertices[5];
+            vertices[10] = vertices[6];
+            vertices[11] = vertices[7];
+            vertices[12] = new Vector3(-deviceRect.x, -deviceRect.y, zValue);
+            vertices[13] = new Vector3(deviceRect.z, -deviceRect.y, zValue);
+            vertices[14] = new Vector3(deviceRect.z, deviceRect.w, zValue);
+            vertices[15] = new Vector3(-deviceRect.x, deviceRect.w, zValue);
+
+            var outerColor = EditorGUIUtility.isProSkin ? new Color(217f / 255, 217f / 255, 217f / 255) : new Color(100f / 255, 100f / 255, 100f / 255);
+            var innerColor = new Color(41f / 255, 41f / 255, 41f / 255);
+
+            var mesh = new Mesh()
+            {
+                vertices = vertices,
+                colors = new[]
+                {
+                    outerColor, outerColor, outerColor, outerColor, outerColor, outerColor, outerColor, outerColor,
+                    innerColor, innerColor, innerColor, innerColor, innerColor, innerColor, innerColor, innerColor,
+                },
+                triangles = new[]
+                {
+                    0, 4, 1,  1, 4, 5,   1, 5, 6,   1, 6, 2,   6, 7, 2,    7, 3, 2,    0, 3, 4,   3, 7, 4, // Outer
+                    8, 12, 9, 9, 12, 13, 9, 13, 14, 9, 14, 10, 14, 15, 10, 15, 11, 10, 8, 11, 12, 11, 15, 12 // Inner
+                }
+            };
+
+            m_PreviewMaterial.mainTexture = null;
+            m_PreviewMaterial.SetPass(0);
+
+            var transformMatrix = Matrix4x4.TRS(new Vector3(m_Offset.x, m_Offset.y), m_Rotation, new Vector3(m_Scale / 100f, m_Scale / 100f));
+            Graphics.DrawMeshNow(mesh, transformMatrix);
+        }
+
+        private void RenderSafeArea()
+        {
+            if (!m_HighlightSafeArea)
+                return;
+
+            var safeAreaInScreen = GetSafeAreaInScreen();
+            var halfImageWidth = safeAreaInScreen.width / 2;
+            var halfImageHeight = safeAreaInScreen.height / 2;
+
+            var vertices = new Vector3[8];
+            vertices[0] = new Vector3(-halfImageWidth, -halfImageHeight, zValue);
+            vertices[1] = new Vector3(halfImageWidth, -halfImageHeight, zValue);
+            vertices[2] = new Vector3(halfImageWidth, halfImageHeight, zValue);
+            vertices[3] = new Vector3(-halfImageWidth, halfImageHeight, zValue);
+            vertices[4] = new Vector3(-halfImageWidth + m_HighlightSafeAreaLineWidth, -halfImageHeight + m_HighlightSafeAreaLineWidth, zValue);
+            vertices[5] = new Vector3(halfImageWidth - m_HighlightSafeAreaLineWidth, -halfImageHeight + m_HighlightSafeAreaLineWidth, zValue);
+            vertices[6] = new Vector3(halfImageWidth - m_HighlightSafeAreaLineWidth, halfImageHeight - m_HighlightSafeAreaLineWidth, zValue);
+            vertices[7] = new Vector3(-halfImageWidth + m_HighlightSafeAreaLineWidth, halfImageHeight - m_HighlightSafeAreaLineWidth, zValue);
+
+            var offset = new Vector2(m_Offset.x + safeAreaInScreen.x / 2, m_Offset.y + safeAreaInScreen.y / 2);
+            offset = ComputeOffsetForScreenMode(offset, true);
+
+            var color = m_HighlightSafeAreaColor;
+            var mesh = new Mesh()
+            {
+                vertices = vertices,
+                colors = new[] { color, color, color, color, color, color, color, color },
+                triangles = new[] { 0, 4, 1, 1, 4, 5, 1, 5, 6, 1, 6, 2, 6, 7, 2, 7, 3, 2, 0, 3, 4, 3, 7, 4 }
+            };
+
+            m_PreviewMaterial.mainTexture = null;
+            m_PreviewMaterial.SetPass(0);
+
+            var transformMatrix = Matrix4x4.TRS(new Vector3(offset.x, offset.y), ComputeRotationForHighlightSafeArea(), Vector3.one);
+            Graphics.DrawMeshNow(mesh, transformMatrix);
+        }
+
         // Only gets called during switching device.
         public void Update(DeviceInfo deviceInfo, bool fullScreen)
         {
@@ -694,12 +670,6 @@ namespace Unity.DeviceSimulator
                 FitToScreenScale();
         }
 
-        public void OnStateChanged()
-        {
-            m_PreviewImageRenderer.MarkDirtyRepaint();
-            ComputeBoundingBox();
-        }
-
         public void OnSimulationStateChanged(SimulationState simulationState)
         {
             SetInactiveMsgState(simulationState == SimulationState.Disabled);
@@ -710,7 +680,7 @@ namespace Unity.DeviceSimulator
             var overlayOffset = m_DeviceInfo.Meta.overlayOffset;
             var width = m_DeviceInfo.Screens[0].width + overlayOffset.x + overlayOffset.z;
             var height = m_DeviceInfo.Screens[0].height + overlayOffset.y + overlayOffset.w;
-            var toScreenCenter = new Vector2(m_DeviceInfo.Screens[0].width / 2 + overlayOffset.x, m_DeviceInfo.Screens[0].height / 2 + overlayOffset.y);
+            var toScreenCenter = new Vector2(m_DeviceInfo.Screens[0].width / 2f + overlayOffset.x, m_DeviceInfo.Screens[0].height / 2f + overlayOffset.y);
 
             var vertices = new Vector3[4];
             vertices[0] = new Vector3(0, 0, Vertex.nearZ);
@@ -719,8 +689,7 @@ namespace Unity.DeviceSimulator
             vertices[3] = new Vector3(0, height, Vertex.nearZ);
 
             var scale = m_Scale / 100f;
-            Matrix4x4 transformMatrix = Matrix4x4.TRS(
-                new Vector3(0, 0, 0), m_Rotation, new Vector3(scale, scale));
+            Matrix4x4 transformMatrix = Matrix4x4.TRS(new Vector3(0, 0, 0), m_Rotation, new Vector3(scale, scale));
 
             for (int index = 0; index < vertices.Length; ++index)
             {
@@ -743,7 +712,7 @@ namespace Unity.DeviceSimulator
                     max.y = vertex.y;
             }
 
-            m_BoundingBox = max - min;
+            m_BoundingBox = max - min + new Vector2(2, 2);
             m_Offset = m_BoundingBox / 2;
 
             // We need to consider the case that overlay offset is not symmetrical.
@@ -775,8 +744,8 @@ namespace Unity.DeviceSimulator
             var deviceSpaceToScreenSpace = Matrix4x4.Translate(new Vector3(-overlayOffset.x, -overlayOffset.y));
             m_TouchEventManipulator.PreviewImageRendererSpaceToScreenSpace = deviceSpaceToScreenSpace * deviceSpaceToPreviewImageRendererSpace.inverse;
 
-            m_PreviewImageRenderer.style.width = m_BoundingBox.x;
-            m_PreviewImageRenderer.style.height = m_BoundingBox.y;
+            m_PreviewRenderer.style.width = m_BoundingBox.x;
+            m_PreviewRenderer.style.height = m_BoundingBox.y;
         }
     }
 }

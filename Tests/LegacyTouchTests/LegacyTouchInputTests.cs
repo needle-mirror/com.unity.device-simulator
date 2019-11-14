@@ -58,7 +58,7 @@ namespace Tests
         public void SetUp()
         {
             m_InputProvider = new TestInput();
-            m_ScreenSimulation = new ScreenSimulation(m_Device, m_InputProvider, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_SimulatorWindow);
+            m_ScreenSimulation = new ScreenSimulation(m_Device, m_InputProvider, new SimulationPlayerSettings(), m_SimulatorWindow);
         }
 
         [TearDown]

@@ -3,9 +3,24 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [1.3.0-preview] - 2019-11-15
+
+### Added
+- Support loading render doc from the Simulator view
+- Safe area highlight color and line width can now be configured in Preferences
+- Simulator info panel can now be hidden
+
+### Removed
+- Removed Player Settings section from the Simulator info panel
+
+### Fixed
+- Preview image is no longer darker than game view with linear color space
+- Top of the device can now be scrolled to when the Simulator view is zoomed in
+
+
 ## [1.2.0-preview] - 2019-10-11
 ### Added
-- `Preferences -> Device Simulator` to set the customized devicee directory
+- `Preferences -> Device Simulator` to set the customised device directory
 
 ## [1.1.0-preview] - 2019-09-26
 ### Added

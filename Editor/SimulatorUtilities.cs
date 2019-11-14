@@ -4,7 +4,6 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
-using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
 {
@@ -24,27 +23,6 @@ namespace Unity.DeviceSimulator
 
     internal enum SimulationState{ Enabled, Disabled }
 
-    /// <summary>
-    /// This class contains the info in PlayeSettings foldout that we need to initialize ScreenSimulation.
-    /// </summary>
-    [Serializable]
-    internal class SimulationPlayerSettings
-    {
-        public ResolutionScalingMode resolutionScalingMode = ResolutionScalingMode.Disabled;
-        public int targetDpi;
-        public bool androidStartInFullscreen = true;
-
-        public UIOrientation defaultOrientation = UIOrientation.AutoRotation;
-        public bool allowedPortrait = true;
-        public bool allowedPortraitUpsideDown = true;
-        public bool allowedLandscapeLeft = true;
-        public bool allowedLandscapeRight = true;
-
-        public bool autoGraphicsAPI = true;
-        public GraphicsDeviceType[] androidGraphicsAPIs = {GraphicsDeviceType.Vulkan, GraphicsDeviceType.OpenGLES3};
-        public GraphicsDeviceType[] iOSGraphicsAPIs = {GraphicsDeviceType.Metal};
-    }
-
     internal class SimulatorJsonSerialization
     {
         public int scale = 20;
@@ -54,8 +32,6 @@ namespace Unity.DeviceSimulator
         [NonSerialized]
         public Quaternion rotation = Quaternion.identity;
         public string friendlyName = string.Empty;
-        public bool overrideDefaultPlayerSettings = false;
-        public SimulationPlayerSettings customizedPlayerSettings = null;
     }
 
     internal static class Extensions
@@ -76,7 +52,7 @@ namespace Unity.DeviceSimulator
             return (deviceInfo?.SystemInfo != null) ? deviceInfo.SystemInfo.operatingSystem.ToLower().Contains(os) : false;
         }
 
-        public static bool LoadOverlayImage(this DeviceInfo deviceInfo, DeviceHandle handle)
+        public static bool LoadOverlayImage(this DeviceInfo deviceInfo)
         {
             if (deviceInfo.Meta.overlayImage != null)
                 return true;
@@ -84,7 +60,11 @@ namespace Unity.DeviceSimulator
             if (string.IsNullOrEmpty(deviceInfo.Meta.overlay))
                 return false;
 
-            var overlayBytes = File.ReadAllBytes(Path.Combine(handle.Directory, deviceInfo.Meta.overlay));
+            var filePath = Path.Combine(deviceInfo.Directory, deviceInfo.Meta.overlay);
+            if (!File.Exists(filePath))
+                return false;
+
+            var overlayBytes = File.ReadAllBytes(filePath);
             var texture = new Texture2D(2, 2, TextureFormat.Alpha8, false)
             {
                 alphaIsTransparency = true
@@ -102,22 +82,7 @@ namespace Unity.DeviceSimulator
 
     internal static class SimulatorUtilities
     {
-        public static void TransformVertices(Quaternion rotation, Vector2 offset, Vertex[] vertices)
-        {
-            var matrix = Matrix4x4.Rotate(rotation);
-            for (int index = 0; index < vertices.Length; ++index)
-            {
-                vertices[index].position = matrix.MultiplyPoint(vertices[index].position);
-            }
-
-            for (int index = 0; index < vertices.Length; ++index)
-            {
-                vertices[index].position.x += offset.x;
-                vertices[index].position.y += offset.y;
-            }
-        }
-
-        public static void SetTextureCoordinates(ScreenOrientation orientation, Vertex[] vertices)
+        public static void SetTextureCoordinates(ScreenOrientation orientation, Vector2[] vertices)
         {
             Assert.IsTrue(vertices.Length == 4);
 
@@ -144,7 +109,7 @@ namespace Unity.DeviceSimulator
             for (int index = 0; index < 4; ++index)
             {
                 var uvIndex = (index + startPos) % 4;
-                vertices[index].uv = uvs[uvIndex];
+                vertices[index] = uvs[uvIndex];
             }
         }
 

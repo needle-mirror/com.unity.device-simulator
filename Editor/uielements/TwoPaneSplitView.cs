@@ -76,6 +76,8 @@ namespace UnityEditor.UIElements
 
         private SquareResizer m_Resizer;
 
+        private float m_PreviousLeftPaneWidth = 1;
+
         public TwoPaneSplitView()
         {
             AddToClassList(s_UssClassName);
@@ -271,6 +273,22 @@ namespace UnityEditor.UIElements
                         m_DragLineAnchor.style.top = activeElementPos;
                 }
             }
+        }
+
+        public void HideLeftPanel(bool hide)
+        {
+            if (hide)
+            {
+                m_PreviousLeftPaneWidth = m_LeftPane.style.width.value.value;
+                m_LeftPane.style.width = 1;
+            }
+            else
+            {
+                m_LeftPane.style.width = m_PreviousLeftPaneWidth;
+                m_PreviousLeftPaneWidth = 1;
+            }
+
+            m_DragLineAnchor.style.visibility = hide ? Visibility.Hidden : Visibility.Visible;
         }
 
         public override VisualElement contentContainer

@@ -29,11 +29,11 @@ Switch between Game view and Simulator view.
 #### 2. Device selection
 Select from the available devices.
 
-#### 3. Restart
+#### 3. Reload
 Initialise simulation of Screen and SystemInfo classes using Player Settings without causing a domain reload.
 
 #### 4. Scale
-Controls how big the device appears inside the
+Controls how big the device appears inside the simulator window.
 
 #### 5. Fit to Screen
 Automatically scale device to fit snugly inside the window.
@@ -57,25 +57,16 @@ Shows the most important data of the currently simulated device:
 #### 9. Screen Settings
 Allow viewing and changing the values of the Screen class.
 
-#### 10. Player Settings
-Device Simulator Player Settings override the real [Player Settings](https://docs.unity3d.com/2019.3/Documentation/Manual/class-PlayerSettings.html). Especially useful for those that don't have Android or iOS support installed. This menu includes all Player Settings that currently affect the simulation.
-- Start in Fullscreen
-- Resolution Scaling Mode
-- Default Orientations
-- Allowed Orientations
-- Auto Graphics API
-- Graphics API
-
-**Use Player Settings** controls whether the real or simulated Player Settings are used.
-
-#### 11. Preferences
+#### 10. Preferences
 You can access Device Simulator preferences by menu **Edit \> Preferences \> Device Simulator**, where you can
-- Set the customized device directory, please make sure your device json files end with ".device.json".  
-  Please reopen the Device Simulator window after setting the customized device directory.
+- Set the customised device directory, please make sure your device json files end with ".device.json".
+- Set color and width of the safe area highlight line.
+  Please reopen the Device Simulator window after setting the customised device directory.
 
 ## Document revision history
 |Date|Reason|
 |---|---|
+|Nov 15, 2019|Document Updated. Matches package version 1.3.0-preview|
 |Oct 11, 2019|Document Updated. Matches package version 1.2.0-preview|
 |Sep 26, 2019|Document Updated. Matches package version 1.1.0-preview|
 |Sep 23, 2019|Document Updated. Matches package version 1.0.0-preview|

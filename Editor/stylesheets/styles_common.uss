@@ -55,6 +55,14 @@
     align-items: center;
 }
 
+.unity-device-simulator__hide-control-panel {
+    border-left: 0px;
+    margin-left: 1px;
+    padding: 0px;
+    width: 17px;
+    height: 16px;
+}
+
 .unity-device-simulator__scale-value-label {
     width: 25px;
     margin-right: 5px;
@@ -114,10 +122,6 @@
 
 .unity-device-simulator__scrollview-container, .unity-device-simulator__preview-scrollview {
     flex-grow: 1;
-}
-
-.unity-device-simulator__preview-scrollview > #unity-content-viewport > #unity-content-container {
-    align-self: center;
 }
 
 .unity-device-simulator__preview-container {

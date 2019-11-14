@@ -41,7 +41,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations, screenWidth, screenHeight);
             var testWindow = new TestWindow();
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), testWindow);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), testWindow);
 
             Screen.orientation = initOrientation;
             Assert.AreEqual(initOrientation.IsLandscape() ? landscapeResolution : portraitResolution, testWindow.TargetSize);
@@ -71,7 +71,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations);
             var testWindow = new TestWindow();
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), testWindow);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), testWindow);
 
             Screen.orientation = initOrientation;
             Screen.SetResolution(newWidth, newHeight, true);

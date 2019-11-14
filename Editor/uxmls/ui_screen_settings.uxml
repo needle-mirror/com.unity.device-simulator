@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UXML xmlns="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements">
+    <Foldout class="unity-device-simulator__control-panel_foldout" text="Screen Settings" value="true" name="screen-settings">
+        <VisualElement name="screen-set-resolution-field" style="flex-direction:row;">
+            <Label text="Resolution" style="-unity-text-align:middle-left; width: 77px" />
+            <editor:IntegerField class="unity-device-simulator__screen-resolution-field" name="screen-width" max-length="4" />
+            <editor:IntegerField class="unity-device-simulator__screen-resolution-field" name="screen-height" max-length="4" />
+            <Button text="Set" name="screen-set-resolution-button" style="width:40px; margin-left:17px" />
+        </VisualElement>
+        <Toggle label="Full Screen" class="unity-device-simulator__screen-toggle" name="full-screen" value="true" />
+        <Toggle label="Auto Rotation" class="unity-device-simulator__screen-toggle" name="auto-rotation" />
+        <editor:EnumField label="Orientation" class="unity-device-simulator__orientation" value="Center" name="screen-orientations" />
+        <VisualElement style="flex-direction:row; margin-top:3px; margin-bottom:2px;" name="rendered-orientation-container">
+            <Label text="Orientation" style="-unity-text-align:middle-left; margin-left:0px; width: 79px" />
+            <Label text="Portrait" class="unity-device-simulator__screen-toggle" name="rendered-orientation" />
+        </VisualElement>
+        <Foldout text="Allowed Orientations" class="unity-device-simulator__allowed-orientations" name="allowed-orientations" value="true">
+            <Toggle label="Portrait" name="orientation-allow-portrait" />
+            <Toggle label="Portrait Upside Down" name="orientation-allow-portrait-upside-down" />
+            <Toggle label="Landscape Left" name="orientation-allow-landscape-left" />
+            <Toggle label="Landscape Right" name="orientation-allow-landscape-right" />
+        </Foldout>
+    </Foldout>
+</UXML>

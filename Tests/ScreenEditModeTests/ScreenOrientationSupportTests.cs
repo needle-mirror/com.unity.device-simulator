@@ -36,7 +36,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(supportedOrientations.ToArray());
 
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
             foreach (var orientation in supportedOrientations)
             {
                 Screen.orientation = orientation;
@@ -58,7 +58,7 @@ namespace Tests
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(supportedOrientations.ToArray());
 
-            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(testDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;

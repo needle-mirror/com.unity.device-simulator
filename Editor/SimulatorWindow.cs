@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
+using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
@@ -10,7 +12,7 @@ using UnityEngine.UIElements;
 namespace Unity.DeviceSimulator
 {
     [EditorWindowTitle(title = "Simulator", useTypeNameAsIconName = true)]
-    internal class SimulatorWindow : PlayModeView, ISimulatorWindow
+    internal class SimulatorWindow : PlayModeView, ISimulatorWindow, IHasCustomMenu
     {
         private SimulationState m_State = SimulationState.Enabled;
         private ScreenSimulation m_ScreenSimulation;
@@ -22,14 +24,13 @@ namespace Unity.DeviceSimulator
         private InputProvider m_InputProvider;
 
         private DeviceDatabase m_DeviceDatabase;
-        private DeviceHandle[] m_DeviceHandles;
         private int CurrentDeviceHandleIndex
         {
             get => m_CurrentDeviceHandleIndex;
             set
             {
                 m_CurrentDeviceHandleIndex = value;
-                CurrentDeviceInfo = m_DeviceDatabase.GetDevice(m_DeviceHandles[value]);
+                CurrentDeviceInfo = m_DeviceDatabase.GetDevice(m_CurrentDeviceHandleIndex);
             }
         }
 
@@ -41,9 +42,9 @@ namespace Unity.DeviceSimulator
         private ToolbarMenu m_DeviceInfoMenu = null;
         private ToolbarButton m_DeviceRestart = null;
 
+        private TwoPaneSplitView m_Splitter = null;
         private SimulatorControlPanel m_ControlPanel = null;
         private SimulatorPreviewPanel m_PreviewPanel = null;
-        private SimulatorPlayerSettingsUI m_PlayerSettings = null;
 
         public Action OnWindowFocus { get; set; }
 
@@ -73,6 +74,23 @@ namespace Unity.DeviceSimulator
             window.Show();
         }
 
+        private void LoadRenderDoc()
+        {
+            if (EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                RenderDoc.Load();
+                ShaderUtil.RecreateGfxDevice();
+            }
+        }
+
+        public virtual void AddItemsToMenu(GenericMenu menu)
+        {
+            if (RenderDoc.IsInstalled() && !RenderDoc.IsLoaded())
+            {
+                menu.AddItem(EditorGUIUtility.TrTextContent(RenderDocUtil.loadRenderDocLabel), false, LoadRenderDoc);
+            }
+        }
+
         void OnEnable()
         {
             autoRepaintOnSceneChange = true;
@@ -97,36 +115,34 @@ namespace Unity.DeviceSimulator
             rootVisualElement.AddStyleSheetPath($"{kPackagePath}/stylesheets/styles_common.uss");
             rootVisualElement.AddStyleSheetPath($"{kPackagePath}/stylesheets/styles_{(EditorGUIUtility.isProSkin ? "dark" : "light")}.uss");
 
-            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{kPackagePath}/uxmls/device_simulator_ui.uxml");
+            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{kPackagePath}/uxmls/ui_device_simulator.uxml");
             asset.CloneTree(rootVisualElement);
 
             // We need to initialize SimulatorPlayerSettings before ScreenSimulation.
-            m_PlayerSettings = new SimulatorPlayerSettingsUI(rootVisualElement.Q<Foldout>("player-settings"), CurrentDeviceInfo, m_SimulatorJsonSerialization);
+            var playerSettings = new SimulationPlayerSettings();
 
             m_InputProvider = new InputProvider();
             if (m_SimulatorJsonSerialization != null)
                 m_InputProvider.Rotation = m_SimulatorJsonSerialization.rotation; // We have to set the rotation here as we use it in ScreenSimulation constructor.
 
-            InitSimulation();
+            InitSimulation(playerSettings);
 
             InitToolbar();
-            m_ControlPanel = new
-                SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, m_PlayerSettings.CurrentPlayerSettings);
+            m_Splitter = rootVisualElement.Q<TwoPaneSplitView>("splitter");
+
+            m_ControlPanel = new SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, playerSettings);
             m_PreviewPanel = new SimulatorPreviewPanel(rootVisualElement.Q<VisualElement>("preview-panel"), m_InputProvider, CurrentDeviceInfo, m_SimulatorJsonSerialization)
             {
                 TargetOrientation = m_ScreenSimulation.orientation,
                 IsFullScreen = m_ScreenSimulation.fullScreen,
-                OnPreview = this.RenderView
+                OnPreview = this.RenderView,
+                OnControlPanelHiddenChanged = HideControlPanel
             };
-
-            EditorApplication.playModeStateChanged += OnEditorPlayModeStateChanged;
         }
 
-        private void InitSimulation()
+        private void InitSimulation(SimulationPlayerSettings playerSettings)
         {
             m_ScreenSimulation?.Dispose();
-
-            var playerSettings = m_PlayerSettings.CurrentPlayerSettings;
 
             m_ScreenSimulation = new ScreenSimulation(CurrentDeviceInfo, m_InputProvider, playerSettings, this);
             m_ScreenSimulation.OnFullScreenChanged += OnFullScreenChanged;
@@ -183,17 +199,6 @@ namespace Unity.DeviceSimulator
             SaveStates();
             m_ScreenSimulation.Dispose();
             m_SystemInfoSimulation.Dispose();
-            EditorApplication.playModeStateChanged -= OnEditorPlayModeStateChanged;
-        }
-
-        private void OnEditorPlayModeStateChanged(PlayModeStateChange state)
-        {
-            // Here we register a callback for play mode state change to reinitialize the overlay image.
-            if (state == PlayModeStateChange.EnteredEditMode)
-            {
-                CurrentDeviceInfo.LoadOverlayImage(m_DeviceHandles[CurrentDeviceHandleIndex]);
-                OnStateChanged();
-            }
         }
 
         private void OnStateChanged()
@@ -218,9 +223,7 @@ namespace Unity.DeviceSimulator
                 fitToScreenEnabled = m_PreviewPanel.FitToScreenEnabled,
                 rotationDegree = m_PreviewPanel.RotationDegree,
                 highlightSafeAreaEnabled = m_PreviewPanel.HighlightSafeAre,
-                friendlyName = CurrentDeviceInfo.Meta.friendlyName,
-                overrideDefaultPlayerSettings = m_PlayerSettings.OverrideDefaultPlayerSettings,
-                customizedPlayerSettings = m_PlayerSettings.CustomizedPlayerSettings
+                friendlyName = CurrentDeviceInfo.Meta.friendlyName
             };
 
             var jsonString = JsonUtility.ToJson(states);
@@ -260,18 +263,14 @@ namespace Unity.DeviceSimulator
 
             states.rotation = Quaternion.Euler(0, 0, 360 - states.rotationDegree);
 
-            if (states.customizedPlayerSettings.androidGraphicsAPIs.Length == 0 || states.customizedPlayerSettings.iOSGraphicsAPIs.Length == 0)
-                return null;
-
             return states;
         }
 
         private void InitDeviceInfoList()
         {
             m_DeviceDatabase = new DeviceDatabase();
-            m_DeviceHandles = m_DeviceDatabase.GetDeviceHandles();
 
-            Assert.AreNotEqual(0, m_DeviceHandles.Length, "No devices found!");
+            Assert.AreNotEqual(0, m_DeviceDatabase.m_Devices.Count, "No devices found!");
             CurrentDeviceHandleIndex = 0;
         }
 
@@ -280,9 +279,9 @@ namespace Unity.DeviceSimulator
             if (m_SimulatorJsonSerialization == null)
                 return;
 
-            for (int index = 0; index < m_DeviceHandles.Length; ++index)
+            for (int index = 0; index < m_DeviceDatabase.m_Devices.Count; ++index)
             {
-                if (m_DeviceHandles[index].Name == m_SimulatorJsonSerialization.friendlyName)
+                if (m_DeviceDatabase.m_Devices[index].Meta.friendlyName == m_SimulatorJsonSerialization.friendlyName)
                 {
                     CurrentDeviceHandleIndex = index;
                     break;
@@ -306,7 +305,7 @@ namespace Unity.DeviceSimulator
             m_DeviceInfoMenu.text = CurrentDeviceInfo.Meta.friendlyName;
             UpdateDeviceInfoMenu();
 
-            m_DeviceRestart = rootVisualElement.Q<ToolbarButton>("device-restart");
+            m_DeviceRestart = rootVisualElement.Q<ToolbarButton>("reload-player-settings");
             m_DeviceRestart.clickable = new Clickable(RestartSimulation);
         }
 
@@ -333,25 +332,30 @@ namespace Unity.DeviceSimulator
             UpdateDeviceInfoMenu();
 
             RestartSimulation();
-            m_PlayerSettings.Update(CurrentDeviceInfo);
         }
 
         private void UpdateDeviceInfoMenu()
         {
-            foreach (var deviceHandle in m_DeviceHandles)
+            foreach (var deviceInfo in m_DeviceDatabase.m_Devices)
             {
-                var status = (deviceHandle.Name == CurrentDeviceInfo.Meta.friendlyName) ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal;
-                m_DeviceInfoMenu.menu.AppendAction(deviceHandle.Name, HandleDeviceSelection, HandleDeviceSelection => status);
+                var status = (deviceInfo.Meta.friendlyName == CurrentDeviceInfo.Meta.friendlyName) ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal;
+                m_DeviceInfoMenu.menu.AppendAction(deviceInfo.Meta.friendlyName, HandleDeviceSelection, HandleDeviceSelection => status);
             }
         }
 
         private void RestartSimulation()
         {
-            InitSimulation();
+            var playerSettings = new SimulationPlayerSettings();
 
-            m_ControlPanel.Update(CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, m_PlayerSettings.CurrentPlayerSettings);
+            InitSimulation(playerSettings);
+
+            m_ControlPanel.Update(CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, playerSettings);
             m_PreviewPanel.Update(CurrentDeviceInfo, m_ScreenSimulation.fullScreen);
-            m_PlayerSettings.Update(CurrentDeviceInfo);
+        }
+
+        private void HideControlPanel(bool hidden)
+        {
+            m_Splitter.HideLeftPanel(hidden);
         }
     }
 }

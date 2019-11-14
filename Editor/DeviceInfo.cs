@@ -18,6 +18,9 @@ namespace Unity.DeviceSimulator
         {
             return Meta.friendlyName;
         }
+
+        [NonSerialized]
+        public string Directory;
     }
 
     [Serializable]

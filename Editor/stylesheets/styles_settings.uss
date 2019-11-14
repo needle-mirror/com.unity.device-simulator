@@ -3,6 +3,7 @@
     margin-right: 0;
     margin-top: 2px;
     margin-bottom: 0;
+    padding-right: 1px;
 }
 
 .settings-title {
@@ -13,7 +14,8 @@
 
 .section-title {
     -unity-font-style: bold;
-    margin-bottom: 5px;
+    margin-top: 5px;
+    margin-bottom: 3px;
 }
 
 /*Styles for project settings*/
@@ -30,9 +32,8 @@
 }
 
 /*Styles for user settings*/
-.user-device-directory-container {
+.user-device-directory-container, .user-safe-area-line-width-container {
     flex-direction: row;
-    padding-right: 1px;
 }
 
 .user-device-directory-field {
@@ -41,6 +42,16 @@
 
 .user-device-directory-button {
     flex-grow: 0.1;
-    align-self: flex-end;
     min-width: 30px;
+}
+
+.user-safe-area-line-color {
+    flex-grow: 1;
+}
+
+.user-safe-area-line-width-label {
+    margin-left: 3px;
+    margin-right: 3px;
+    width: 15px;
+    -unity-text-align: middle-center;
 }

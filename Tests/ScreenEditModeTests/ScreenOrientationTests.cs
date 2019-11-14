@@ -41,7 +41,7 @@ namespace Tests
         public void RotateWithAutorotate(ScreenOrientation orientation)
         {
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[ScreenOrientation.PortraitUpsideDown];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;
@@ -63,7 +63,7 @@ namespace Tests
         public void RuntimeAutoRotationOrientationEnable(ScreenOrientation orientation)
         {
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[orientation];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;
@@ -86,7 +86,7 @@ namespace Tests
         public void RuntimeAutoRotationOrientationDisable(ScreenOrientation orientation)
         {
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[orientation];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;
@@ -107,7 +107,7 @@ namespace Tests
         public void SetOrientationExplicitly(ScreenOrientation orientation)
         {
             m_InputTest.Rotation = ScreenTestUtilities.OrientationRotation[ScreenOrientation.PortraitUpsideDown];
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
             Screen.orientation = orientation;
             Assert.AreEqual(orientation, Screen.orientation);
         }
@@ -122,7 +122,7 @@ namespace Tests
             var enabledOrientations = new List<ScreenOrientation>(ScreenTestUtilities.ExplicitOrientations);
             enabledOrientations.Remove(disabledOrientation);
 
-            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, SimulatorPlayerSettingsUI.InitDefaultPlayerSettings(), m_Window);
+            m_Simulation = new ScreenSimulation(m_TestDevice, m_InputTest, new SimulationPlayerSettings(), m_Window);
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             foreach (var orientation in enabledOrientations)

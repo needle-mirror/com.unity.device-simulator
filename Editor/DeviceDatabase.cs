@@ -4,24 +4,9 @@ using UnityEngine;
 
 namespace Unity.DeviceSimulator
 {
-    internal class DeviceHandle
-    {
-        public DeviceHandle(int id, string name, string directory)
-        {
-            Id = id;
-            Name = name;
-            Directory = directory;
-        }
-
-        public int Id { get; }
-        public string Name { get; }
-        public string Directory { get; }
-    }
-
     internal class DeviceDatabase
     {
-        private List<DeviceInfo> m_Devices = new List<DeviceInfo>();
-        private readonly List<DeviceHandle> m_DeviceHandles = new List<DeviceHandle>();
+        public readonly List<DeviceInfo> m_Devices = new List<DeviceInfo>();
 
         public DeviceDatabase()
         {
@@ -31,7 +16,6 @@ namespace Unity.DeviceSimulator
         public void Refresh()
         {
             m_Devices.Clear();
-            m_DeviceHandles.Clear();
 
             var deviceDirectoryPaths = new[]
             {
@@ -54,29 +38,24 @@ namespace Unity.DeviceSimulator
                     {
                         deviceInfo = JsonUtility.FromJson<DeviceInfo>(sr.ReadToEnd());
                     }
+                    deviceInfo.Directory = deviceDirectory.FullName;
 
                     m_Devices.Add(deviceInfo);
-                    m_DeviceHandles.Add(new DeviceHandle(m_Devices.Count - 1, deviceInfo.Meta.friendlyName, deviceDirectory.FullName));
                 }
             }
-            m_DeviceHandles.Sort((x, y) => string.CompareOrdinal(x.Name, y.Name));
+            m_Devices.Sort((x, y) => string.CompareOrdinal(x.Meta.friendlyName, y.Meta.friendlyName));
         }
 
-        public DeviceInfo GetDevice(DeviceHandle handle)
+        public DeviceInfo GetDevice(int index)
         {
-            var deviceInfo =  m_Devices[handle.Id];
+            var deviceInfo =  m_Devices[index];
 
-            if (!deviceInfo.LoadOverlayImage(handle) && deviceInfo.Meta.overlayOffset == Vector4.zero)
+            if (!deviceInfo.LoadOverlayImage() && deviceInfo.Meta.overlayOffset == Vector4.zero)
             {
                 deviceInfo.Meta.overlayOffset = new Vector4(40, 60, 40, 60);
             }
 
             return deviceInfo;
-        }
-
-        public DeviceHandle[] GetDeviceHandles()
-        {
-            return m_DeviceHandles.ToArray();
         }
     }
 }

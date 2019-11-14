@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -15,7 +16,7 @@ namespace Unity.DeviceSimulator
 
         private static DeviceSimulatorUserSettingsProvider s_Provider = null;
 
-        private const string k_DeviceDirectoryPreferenceKey = "DeviceSimulatorDeviceDirectory";
+        private const string k_UserSettingsPreferenceKey = "DeviceSimulatorUserSettings";
 
         private SerializedObject SerializedSettings => new SerializedObject(LoadOrCreateSettings());
 
@@ -31,17 +32,21 @@ namespace Unity.DeviceSimulator
 
             provider.activateHandler = (searchContext, rootElement) =>
             {
-                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/user_settings.uxml");
-                visualTree.CloneTree(rootElement);
+                var settings = LoadOrCreateSettings();
 
+                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/ui_user_settings.uxml");
+                visualTree.CloneTree(rootElement);
+                rootElement.Bind(new SerializedObject(settings));
+
+                // Don't bind the device directory as we need to validate the directory before setting to DeviceSimulatorUserSettings.
                 var textField = rootElement.Q<TextField>("customized-device-directory");
                 textField.isDelayed = true;
-                textField.SetValueWithoutNotify(LoadOrCreateSettings().DeviceDirectory);
+                textField.SetValueWithoutNotify(settings.DeviceDirectory);
                 textField.RegisterValueChangedCallback(SetCustomizedDeviceDirectory);
                 provider.m_CustomizedDeviceDirectoryField = textField;
 
-                var button = rootElement.Q<Button>("set-customized-device-directory");
-                button.clickable = new Clickable(SetCustomizedDeviceDirectory);
+                var button = rootElement.Q<Button>("browse-customized-device-directory");
+                button.clickable = new Clickable(BrowseCustomizedDeviceDirectory);
             };
 
             s_Provider = provider;
@@ -61,7 +66,7 @@ namespace Unity.DeviceSimulator
             LoadOrCreateSettings().DeviceDirectory = directory;
         }
 
-        private static void SetCustomizedDeviceDirectory()
+        private static void BrowseCustomizedDeviceDirectory()
         {
             var settings = LoadOrCreateSettings();
 
@@ -79,10 +84,15 @@ namespace Unity.DeviceSimulator
                 return s_Settings;
 
             DeviceSimulatorUserSettings settings = ScriptableObject.CreateInstance<DeviceSimulatorUserSettings>();
-
-            var directory = EditorPrefs.GetString(k_DeviceDirectoryPreferenceKey, "");
-            if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
-                settings.DeviceDirectory = directory;
+            try
+            {
+                var settingsString = EditorPrefs.GetString(k_UserSettingsPreferenceKey, "");
+                if (!string.IsNullOrEmpty(settingsString))
+                    JsonUtility.FromJsonOverwrite(settingsString, settings);
+            }
+            catch (Exception)
+            {
+            }
 
             s_Settings = settings;
             return settings;
@@ -90,8 +100,14 @@ namespace Unity.DeviceSimulator
 
         private void SaveSettings()
         {
-            if (s_Settings != null)
-                EditorPrefs.SetString(k_DeviceDirectoryPreferenceKey, s_Settings.DeviceDirectory);
+            if (s_Settings == null)
+                return;
+
+            // For now we only store a string to the EditorPrefs, please make sure we don't store too long string here.
+            // Otherwise we have to save into a file and store the file path in EditorPrefs.
+            var settingsString = JsonUtility.ToJson(s_Settings);
+            if (!string.IsNullOrEmpty(settingsString))
+                EditorPrefs.SetString(k_UserSettingsPreferenceKey, settingsString);
         }
 
         public override void OnDeactivate()
