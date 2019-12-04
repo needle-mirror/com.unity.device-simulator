@@ -22,7 +22,7 @@ namespace Unity.DeviceSimulator
         private VisualElement m_RenderedOrientationContainer = null;
         private Label m_RendererOrientation = null;
 
-        private Foldout m_AllowedOrientationsFoldout = null;
+        private VisualElement m_AllowedOrientationsSection = null;
         private Toggle m_AllowedPortrait = null;
         private Toggle m_AllowedPortraitUpsideDown = null;
         private Toggle m_AllowedLandscapeLeft = null;
@@ -55,7 +55,7 @@ namespace Unity.DeviceSimulator
             m_RenderedOrientationContainer = m_RootElement.Q<VisualElement>("rendered-orientation-container");
             m_RendererOrientation = m_RootElement.Q<Label>("rendered-orientation");
 
-            m_AllowedOrientationsFoldout = m_RootElement.Q<Foldout>("allowed-orientations");
+            m_AllowedOrientationsSection = m_RootElement.Q<VisualElement>("allowed-orientations");
 
             m_AllowedPortrait = m_RootElement.Q<Toggle>("orientation-allow-portrait");
             m_AllowedPortrait.RegisterValueChangedCallback((evt) => { Screen.autorotateToPortrait = evt.newValue; });
@@ -143,8 +143,8 @@ namespace Unity.DeviceSimulator
             m_RenderedOrientationContainer.style.visibility = autoRotation ? Visibility.Visible : Visibility.Hidden;
             m_RenderedOrientationContainer.style.position = autoRotation ? Position.Relative : Position.Absolute;
 
-            m_AllowedOrientationsFoldout.style.visibility = autoRotation ? Visibility.Visible : Visibility.Hidden;
-            m_AllowedOrientationsFoldout.style.position = autoRotation ? Position.Relative : Position.Absolute;
+            m_AllowedOrientationsSection.style.visibility = autoRotation ? Visibility.Visible : Visibility.Hidden;
+            m_AllowedOrientationsSection.style.position = autoRotation ? Position.Relative : Position.Absolute;
         }
 
         private void UpdateOrientationDisplay()

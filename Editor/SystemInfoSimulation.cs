@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -11,42 +10,30 @@ namespace Unity.DeviceSimulator
     internal class SystemInfoSimulation : SystemInfoShimBase, ISimulatorEvents
     {
         private readonly DeviceInfo m_DeviceInfo;
-        private readonly GraphicsDependentSystemInfoData m_GraphicsDeviceType;
+        private readonly GraphicsSystemInfoData m_GraphicsDeviceType;
         private readonly List<string> m_ShimmedAssemblies;
 
-        public GraphicsDependentSystemInfoData GraphicsDependentData => m_GraphicsDeviceType;
+        public GraphicsSystemInfoData GraphicsDependentData => m_GraphicsDeviceType;
 
         public SystemInfoSimulation(DeviceInfo deviceInfo, SimulationPlayerSettings playerSettings, List<string> shimmedAssemblies)
         {
-            const string dll = ".dll";
-
             m_ShimmedAssemblies = shimmedAssemblies;
-            m_ShimmedAssemblies.RemoveAll(string.IsNullOrEmpty);
-
-            for (int i = 0; i < m_ShimmedAssemblies.Count; i++)
-            {
-                m_ShimmedAssemblies[i] = m_ShimmedAssemblies[i].ToLower();
-                if (!m_ShimmedAssemblies[i].EndsWith(dll))
-                {
-                    m_ShimmedAssemblies[i] += dll;
-                }
-            }
 
             m_DeviceInfo = deviceInfo;
-            if (m_DeviceInfo?.SystemInfo?.GraphicsDependentData?.Length > 0)
+            if (m_DeviceInfo?.SystemInfo?.graphicsDependentData?.Length > 0)
             {
                 if (deviceInfo.IsAndroidDevice())
                 {
                     m_GraphicsDeviceType = (
                         from selected in playerSettings.androidGraphicsAPIs
-                        from device in m_DeviceInfo.SystemInfo.GraphicsDependentData
+                        from device in m_DeviceInfo.SystemInfo.graphicsDependentData
                         where selected == device.graphicsDeviceType select device).FirstOrDefault();
                 }
                 else if (deviceInfo.IsiOSDevice())
                 {
                     m_GraphicsDeviceType = (
                         from selected in playerSettings.iOSGraphicsAPIs
-                        from device in m_DeviceInfo.SystemInfo.GraphicsDependentData
+                        from device in m_DeviceInfo.SystemInfo.graphicsDependentData
                         where selected == device.graphicsDeviceType select device).FirstOrDefault();
                 }
                 if (m_GraphicsDeviceType == null)
@@ -55,17 +42,6 @@ namespace Unity.DeviceSimulator
                 }
             }
             Enable();
-        }
-
-        private bool ShouldShim()
-        {
-            var callingAssembly = new StackTrace(3).GetFrame(0).GetMethod().Module.ToString().ToLower();
-            foreach (var assembly in m_ShimmedAssemblies)
-            {
-                if (callingAssembly == assembly)
-                    return true;
-            }
-            return false;
         }
 
         public void Enable()
@@ -81,6 +57,11 @@ namespace Unity.DeviceSimulator
         public void Dispose()
         {
             Disable();
+        }
+
+        private bool ShouldShim()
+        {
+            return SimulatorUtilities.ShouldShim(m_ShimmedAssemblies);
         }
 
         #region General SystemInfo Overrides

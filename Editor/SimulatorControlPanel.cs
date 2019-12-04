@@ -1,5 +1,3 @@
-using System.Linq;
-using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
@@ -17,7 +15,11 @@ namespace Unity.DeviceSimulator
 
         private SimulatorScreenSettingsUI m_SimulatorScreenSettings = null;
 
-        public SimulatorControlPanel(VisualElement rootElement, DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation, ScreenSimulation screenSimulation, SimulationPlayerSettings playerSettings)
+        private SimulatorApplicationSettingsUI m_SimulatorApplicationSettings = null;
+
+        public SimulatorControlPanel(VisualElement rootElement, DeviceInfo deviceInfo, SystemInfoSimulation systemInfoSimulation, ScreenSimulation screenSimulation,
+                                     ApplicationSimulation applicationSimulation,
+                                     SimulationPlayerSettings playerSettings)
         {
             m_RootElement = rootElement;
 
@@ -25,6 +27,7 @@ namespace Unity.DeviceSimulator
             UpdateDeviceSpecifications(deviceInfo, systemInfoSimulation);
 
             m_SimulatorScreenSettings = new SimulatorScreenSettingsUI(m_RootElement.Q<VisualElement>("screen-settings"), deviceInfo, screenSimulation, playerSettings);
+            m_SimulatorApplicationSettings = new SimulatorApplicationSettingsUI(m_RootElement, applicationSimulation);
 
             InitDeviceSimulatorExtensions();
         }
@@ -68,7 +71,7 @@ namespace Unity.DeviceSimulator
         {
             m_OS.text = "OS: " + (string.IsNullOrEmpty(deviceInfo.SystemInfo.operatingSystem) ? "N/A" : deviceInfo.SystemInfo.operatingSystem);
             m_CPU.text = "CPU: " + (string.IsNullOrEmpty(deviceInfo.SystemInfo.processorType) ? "N/A" : deviceInfo.SystemInfo.processorType);
-            m_GPU.text = "GPU: " + systemInfoSimulation.GraphicsDependentData.graphicsDeviceType;
+            m_GPU.text = "GPU: " + (systemInfoSimulation.GraphicsDependentData == null ? "N/A" : systemInfoSimulation.GraphicsDependentData.graphicsDeviceType.ToString());
             m_Resolution.text = $"Resolution: {deviceInfo.Screens[0].width} x {deviceInfo.Screens[0].height}";
         }
     }

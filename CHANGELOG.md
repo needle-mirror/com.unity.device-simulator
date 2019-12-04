@@ -3,6 +3,24 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.0.0-preview] - 2019-12-05
+
+### Added
+- Over 50 new devices.
+- Searchable list of devices.
+- Simulation of UnityEngine.Application functionality: internetReachability, isConsolePlatform, isEditor, isMobilePlatform, platform, systemLanguage, LowMemoryCallback.
+- device.json file validation. Devices that don't pass validation are ignored.
+- Documentation for device.json format.
+- Documentation for setting up SystemInfo and Application class simulation.
+
+### Changed
+- device.json format. The new format is incompatible with the old one.
+
+### Fixed
+- Null reference exception when certain fields were omitted from device.json file.
+- Main camera transform affecting and corrupting device rendering.
+- Control panel stays hidden after domain reload.
+
 ## [1.3.0-preview] - 2019-11-15
 
 ### Added

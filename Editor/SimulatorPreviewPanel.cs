@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -12,11 +13,12 @@ namespace Unity.DeviceSimulator
         private InputProvider m_InputProvider = null;
         private DeviceInfo m_DeviceInfo = null;
 
-        public Func<Vector2, bool, RenderTexture> OnPreview { get; set; }
+        public RenderTexture PreviewTexture { private get; set; }
 
         public Action<bool> OnControlPanelHiddenChanged { get; set; }
 
         private bool m_ControlPanelHidden = false;
+        public bool ControlPanelHidden => m_ControlPanelHidden;
 
         private int m_Scale = 20; // Value from (0, 100].
         private const int kScaleMin = 10;
@@ -49,7 +51,6 @@ namespace Unity.DeviceSimulator
         private VisualElement m_ScrollViewContainer = null;
         private VisualElement m_ScrollView = null;
         private IMGUIContainer m_PreviewRenderer = null;
-        private RenderTexture m_PreviewImage = null;
         private Material m_PreviewMaterial = null;
         private Material m_DeviceMaterial = null;
 
@@ -79,6 +80,7 @@ namespace Unity.DeviceSimulator
         {
             if (states != null)
             {
+                m_ControlPanelHidden = states.controlPanelHidden;
                 m_Scale = states.scale;
                 m_FitToScreenEnabled = states.fitToScreenEnabled;
                 m_RotationDegree = states.rotationDegree;
@@ -96,7 +98,7 @@ namespace Unity.DeviceSimulator
         private void InitPreviewToolbar()
         {
             m_HideControlPanel = m_RootElement.Q<ToolbarButton>("hide-control-panel");
-            m_HideControlPanel.style.backgroundImage = (Texture2D)EditorGUIUtility.Load("Icons/d_tab_prev@2x.png");
+            m_HideControlPanel.style.backgroundImage = (Texture2D)EditorGUIUtility.Load($"Icons/d_tab_{(m_ControlPanelHidden ? "next" : "prev")}@2x.png");
             m_HideControlPanel.clickable = new Clickable(HideControlPanel);
 
             #region Scale
@@ -292,7 +294,7 @@ namespace Unity.DeviceSimulator
             var imageHeight = m_DeviceInfo.Screens[0].height;
 
             if (!IsFullScreen)
-                imageHeight = (int)m_DeviceInfo.Screens[0].orientations[ScreenOrientation.Portrait].safeArea.height - m_DeviceInfo.Screens[0].navigationBarHeight;
+                imageHeight = (int)(from o in m_DeviceInfo.Screens[0].orientations where o.orientation == ScreenOrientation.Portrait select o.safeArea.height).First() - m_DeviceInfo.Screens[0].navigationBarHeight;
 
             var scale = m_Scale / 100f;
             halfSize.x = scale * imageWidth / 2;
@@ -310,7 +312,7 @@ namespace Unity.DeviceSimulator
             var scale = m_Scale / 100f;
             var scaledNavigationBarOffset = (IsFullScreen && isHighlightingSafeArea) ? 0 : m_DeviceInfo.Screens[0].navigationBarHeight * scale / 2.0f;
 
-            var safeArea = m_DeviceInfo.Screens[0].orientations[TargetOrientation].safeArea;
+            var safeArea = (from o in m_DeviceInfo.Screens[0].orientations where o.orientation == TargetOrientation select o.safeArea).First();
             var safeAreaOffset = new Vector2(safeArea.x + safeArea.width / 2.0f, safeArea.y + safeArea.height / 2.0f);
             if (SimulatorUtilities.IsLandscape(TargetOrientation))
             {
@@ -422,7 +424,7 @@ namespace Unity.DeviceSimulator
 
         private Rect GetSafeAreaInScreen()
         {
-            var sa = m_DeviceInfo.Screens[0].orientations[TargetOrientation].safeArea;
+            var sa = (from o in m_DeviceInfo.Screens[0].orientations where o.orientation == TargetOrientation select o.safeArea).First();
             if (!IsFullScreen)
             {
                 if (SimulatorUtilities.IsLandscape(TargetOrientation))
@@ -464,12 +466,10 @@ namespace Unity.DeviceSimulator
                 EditorGUIUtility.keyboardControl = 0;
 
             var type = Event.current.type;
-            if (type == EventType.Repaint || m_PreviewImage == null)
+            if (type == EventType.Repaint)
             {
-                var renderTexture = OnPreview(Event.current.mousePosition, false);
-                if (renderTexture.IsCreated())
+                if (PreviewTexture != null && PreviewTexture.IsCreated())
                 {
-                    m_PreviewImage = renderTexture;
                     LoadResources();
                     RenderPreviewImage();
                     RenderDeviceImage();
@@ -507,7 +507,7 @@ namespace Unity.DeviceSimulator
 
         private void RenderPreviewImage()
         {
-            if (m_PreviewImage == null)
+            if (PreviewTexture == null)
                 return;
 
             ComputePreviewImageHalfSizeAndOffset(out Vector2 halfSize, out Vector2 offset);
@@ -528,7 +528,7 @@ namespace Unity.DeviceSimulator
                 triangles = new[] { 0, 1, 3, 1, 2, 3 }
             };
 
-            m_PreviewMaterial.mainTexture = m_PreviewImage;
+            m_PreviewMaterial.mainTexture = PreviewTexture;
             m_PreviewMaterial.SetPass(0);
 
             var transformMatrix = Matrix4x4.TRS(new Vector3(offset.x, offset.y), m_Rotation, Vector3.one);
@@ -537,14 +537,14 @@ namespace Unity.DeviceSimulator
 
         private void RenderDeviceImage()
         {
-            if (m_DeviceInfo.Meta.overlayImage == null)
+            if (m_DeviceInfo.Screens[0].presentation.overlay == null)
             {
                 RenderDeviceBorder();
                 return;
             }
 
             var rect = new Vector4(m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height, m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height);
-            rect = (rect / 2 + m_DeviceInfo.Meta.overlayOffset);
+            rect = (rect / 2 + m_DeviceInfo.Screens[0].presentation.borderSize);
 
             var vertices = new Vector3[4];
             vertices[0] = new Vector3(-rect.x, -rect.y, zValue);
@@ -559,10 +559,11 @@ namespace Unity.DeviceSimulator
                 triangles = new[] { 0, 1, 3, 1, 2, 3 }
             };
 
-            m_DeviceMaterial.mainTexture = m_DeviceInfo.Meta.overlayImage;
+            m_DeviceMaterial.mainTexture = m_DeviceInfo.Screens[0].presentation.overlay;
             m_DeviceMaterial.SetPass(0);
 
             var transformMatrix = Matrix4x4.TRS(new Vector3(m_Offset.x, m_Offset.y), m_Rotation, new Vector3(m_Scale / 100f, m_Scale / 100f));
+
             Graphics.DrawMeshNow(mesh, transformMatrix);
         }
 
@@ -570,7 +571,7 @@ namespace Unity.DeviceSimulator
         {
             // Fallback to draw borders if no overlay image presents.
             var deviceRect = new Vector4(m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height, m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height) / 2;
-            var outerRect = (deviceRect + m_DeviceInfo.Meta.overlayOffset);
+            var outerRect = (deviceRect + m_DeviceInfo.Screens[0].presentation.borderSize);
 
             const float padding = 20;
             var innerRect = outerRect - new Vector4(padding, padding, padding, padding);
@@ -618,6 +619,7 @@ namespace Unity.DeviceSimulator
             m_PreviewMaterial.SetPass(0);
 
             var transformMatrix = Matrix4x4.TRS(new Vector3(m_Offset.x, m_Offset.y), m_Rotation, new Vector3(m_Scale / 100f, m_Scale / 100f));
+
             Graphics.DrawMeshNow(mesh, transformMatrix);
         }
 
@@ -677,7 +679,7 @@ namespace Unity.DeviceSimulator
 
         private void ComputeBoundingBox()
         {
-            var overlayOffset = m_DeviceInfo.Meta.overlayOffset;
+            var overlayOffset = m_DeviceInfo.Screens[0].presentation.borderSize;
             var width = m_DeviceInfo.Screens[0].width + overlayOffset.x + overlayOffset.z;
             var height = m_DeviceInfo.Screens[0].height + overlayOffset.y + overlayOffset.w;
             var toScreenCenter = new Vector2(m_DeviceInfo.Screens[0].width / 2f + overlayOffset.x, m_DeviceInfo.Screens[0].height / 2f + overlayOffset.y);

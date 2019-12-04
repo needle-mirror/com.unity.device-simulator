@@ -4,12 +4,16 @@
     <editor:Toolbar class="unity-device-simulator__toolbar">
         <editor:ToolbarMenu name="playmode-view-menu" />
         <editor:ToolbarSpacer />
-        <editor:ToolbarMenu name="device-info-menu" />
+        <VisualElement name="device-list-menu" class="unity-toolbar-menu">
+            <TextElement name="selected-device-name" class="unity-toolbar-menu__text" style="max-width:180px" />
+            <VisualElement class="unity-toolbar-menu__arrow" />
+        </VisualElement>
         <editor:ToolbarSpacer />
-        <editor:ToolbarButton name="reload-player-settings" style="-unity-text-align: middle-center;" text="Reload" tooltip="Reload the player settings"/>
+        <editor:ToolbarButton name="reload-player-settings" style="-unity-text-align: middle-center;" text="Reload" tooltip="Reload the player settings" />
     </editor:Toolbar>
-    <editor:TwoPaneSplitView name="splitter" fixed-pane-initial-size="300" minimum-first-pane-size="235" minimum-second-pane-size="200">
+    <editor:TwoPaneSplitView name="splitter" left-pane-initial-size="300" minimum-left-pane-size="235" minimum-right-pane-size="200">
         <editor:Style src="../stylesheets/styles_split_view.uss"/>
+        <editor:Style src="../stylesheets/styles_common.uss"/>
         <ScrollView mode="Vertical">
             <VisualElement class="unity-device-simulator__control-panel" name="control-panel">
                 <Foldout class="unity-device-simulator__control-panel_foldout" text="Device Specifications" value="true">

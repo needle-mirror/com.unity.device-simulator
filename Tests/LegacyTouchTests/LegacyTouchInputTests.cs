@@ -39,12 +39,29 @@ namespace Tests
                 dpi = 200,
                 width = 500,
                 height = 1000,
-                orientations = new Dictionary<ScreenOrientation, OrientationDependentData>()
+                orientations = new[]
                 {
-                    {ScreenOrientation.Portrait, new OrientationDependentData() {safeArea = new Rect(0, 0, 500, 1000)}},
-                    {ScreenOrientation.LandscapeLeft, new OrientationDependentData() {safeArea = new Rect(0, 0, 1000, 500)}},
-                    {ScreenOrientation.LandscapeRight, new OrientationDependentData() {safeArea = new Rect(0, 0, 1000, 500)}},
-                    {ScreenOrientation.PortraitUpsideDown, new OrientationDependentData() {safeArea = new Rect(0, 0, 500, 1000)}}
+                    new OrientationData()
+                    {
+                        orientation = ScreenOrientation.Portrait,
+                        safeArea = new Rect(0, 0, 500, 1000)
+                    }
+                    ,
+                    new OrientationData()
+                    {
+                        orientation = ScreenOrientation.LandscapeLeft,
+                        safeArea = new Rect(0, 0, 1000, 500)
+                    },
+                    new OrientationData()
+                    {
+                        orientation = ScreenOrientation.LandscapeRight,
+                        safeArea = new Rect(0, 0, 1000, 500)
+                    },
+                    new OrientationData()
+                    {
+                        orientation = ScreenOrientation.PortraitUpsideDown,
+                        safeArea = new Rect(0, 0, 500, 1000)
+                    }
                 }
             };
 

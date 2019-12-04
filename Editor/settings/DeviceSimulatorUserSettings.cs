@@ -11,5 +11,7 @@ namespace Unity.DeviceSimulator
         public Color SafeAreaHighlightColor = Color.green;
         [SerializeField]
         public int SafeAreaHighlightLineWidth = 2;
+        [SerializeField]
+        public int MaximumVisibleDeviceCount = 20;
     }
 }

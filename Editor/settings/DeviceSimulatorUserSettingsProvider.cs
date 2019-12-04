@@ -14,8 +14,6 @@ namespace Unity.DeviceSimulator
 
         private static DeviceSimulatorUserSettings s_Settings;
 
-        private static DeviceSimulatorUserSettingsProvider s_Provider = null;
-
         private const string k_UserSettingsPreferenceKey = "DeviceSimulatorUserSettings";
 
         private SerializedObject SerializedSettings => new SerializedObject(LoadOrCreateSettings());
@@ -32,28 +30,31 @@ namespace Unity.DeviceSimulator
 
             provider.activateHandler = (searchContext, rootElement) =>
             {
-                var settings = LoadOrCreateSettings();
-
-                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/ui_user_settings.uxml");
-                visualTree.CloneTree(rootElement);
-                rootElement.Bind(new SerializedObject(settings));
-
-                // Don't bind the device directory as we need to validate the directory before setting to DeviceSimulatorUserSettings.
-                var textField = rootElement.Q<TextField>("customized-device-directory");
-                textField.isDelayed = true;
-                textField.SetValueWithoutNotify(settings.DeviceDirectory);
-                textField.RegisterValueChangedCallback(SetCustomizedDeviceDirectory);
-                provider.m_CustomizedDeviceDirectoryField = textField;
-
-                var button = rootElement.Q<Button>("browse-customized-device-directory");
-                button.clickable = new Clickable(BrowseCustomizedDeviceDirectory);
+                provider.InitUI(rootElement);
             };
 
-            s_Provider = provider;
             return provider;
         }
 
-        private static void SetCustomizedDeviceDirectory(ChangeEvent<string> evt)
+        private void InitUI(VisualElement rootElement)
+        {
+            var settings = LoadOrCreateSettings();
+
+            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/ui_user_settings.uxml");
+            visualTree.CloneTree(rootElement);
+            rootElement.Bind(new SerializedObject(settings));
+
+            // Don't bind the device directory as we need to validate the directory before setting to DeviceSimulatorUserSettings.
+            var textField = rootElement.Q<TextField>("customized-device-directory");
+            textField.isDelayed = true;
+            textField.SetValueWithoutNotify(settings.DeviceDirectory);
+            textField.RegisterValueChangedCallback(SetCustomizedDeviceDirectory);
+            m_CustomizedDeviceDirectoryField = textField;
+
+            rootElement.Q<Button>("browse-customized-device-directory").clickable = new Clickable(BrowseCustomizedDeviceDirectory);
+        }
+
+        private void SetCustomizedDeviceDirectory(ChangeEvent<string> evt)
         {
             // We allow users to set the directory to empty.
             var directory = evt.newValue;
@@ -66,7 +67,7 @@ namespace Unity.DeviceSimulator
             LoadOrCreateSettings().DeviceDirectory = directory;
         }
 
-        private static void BrowseCustomizedDeviceDirectory()
+        private void BrowseCustomizedDeviceDirectory()
         {
             var settings = LoadOrCreateSettings();
 
@@ -75,7 +76,7 @@ namespace Unity.DeviceSimulator
                 return;
 
             settings.DeviceDirectory = directory;
-            s_Provider.m_CustomizedDeviceDirectoryField.SetValueWithoutNotify(directory);
+            m_CustomizedDeviceDirectoryField.SetValueWithoutNotify(directory);
         }
 
         public static DeviceSimulatorUserSettings LoadOrCreateSettings()

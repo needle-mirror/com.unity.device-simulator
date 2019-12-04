@@ -9,7 +9,6 @@
     padding: 3px;
     padding-left:0px;
     padding-right:0px;
-    font-size: 10px;
 }
 
 .unity-device-simulator__control-panel_foldout {
@@ -23,29 +22,34 @@
 }
 
 .unity-device-simulator__screen-resolution-field {
-    width: 35px;
+    flex-direction: row;
+    margin-left: 3px;
 }
 
-.unity-device-simulator__screen-toggle, .unity-device-simulator__orientation {
-    margin-left: 0px;
-    margin-bottom: 1px;
+.unity-device-simulator__screen-resolution-field > Label {
+    -unity-text-align:middle-left;
+    width: 132px;
 }
 
-.unity-device-simulator__orientation {
-    width: 215px;
+.unity-device-simulator__screen-resolution-field > IntegerField {
+    width: 37px;
 }
 
-.unity-device-simulator__screen-toggle > Label, .unity-device-simulator__orientation > Label {
-    min-width: 80px;
-    width: 80px;
+.unity-device-simulator__screen-resolution-field > Button {
+    flex-grow: 1;
 }
 
-.unity-device-simulator__allowed-orientations {
-    margin-left: 13px;
+.unity-device-simulator__allowed-orientations > Label {
+    -unity-font-style: bold;
+    margin-top: 5px;
+    margin-left: 3px;
+    margin-bottom: 3px;
 }
 
-.unity-device-simulator__allowed-orientations > #unity-content {
-    margin-left: 0px;
+.unity-device-simulator__orientation_static {
+    flex-direction:row;
+    margin-top:1px;
+    margin-bottom:3px;
 }
 
 .unity-device-simulator__preview-panel-toolbar {
@@ -56,7 +60,7 @@
 }
 
 .unity-device-simulator__hide-control-panel {
-    border-left: 0px;
+    border-left-width: 0px;
     margin-left: 1px;
     padding: 0px;
     width: 17px;

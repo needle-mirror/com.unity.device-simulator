@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using UnityEngine;
-using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 
 namespace Unity.DeviceSimulator
@@ -10,59 +8,118 @@ namespace Unity.DeviceSimulator
     [Serializable]
     internal class DeviceInfo
     {
-        public MetaData Meta;
+        public string friendlyName;
+        public int version;
+
         public ScreenData[] Screens;
         public SystemInfoData SystemInfo;
 
         public override string ToString()
         {
-            return Meta.friendlyName;
+            return friendlyName;
         }
 
         [NonSerialized]
         public string Directory;
+
+        public bool IsAndroidDevice()
+        {
+            return IsGivenDevice("android");
+        }
+
+        public bool IsiOSDevice()
+        {
+            return IsGivenDevice("ios");
+        }
+
+        public bool IsMobileDevice()
+        {
+            return IsAndroidDevice() || IsiOSDevice();
+        }
+
+        public bool IsConsoleDevice()
+        {
+            return false; // Return false for now, should revisit when adding console devices.
+        }
+
+        public bool IsGivenDevice(string os)
+        {
+            return (this.SystemInfo != null) ? this.SystemInfo.operatingSystem.ToLower().Contains(os) : false;
+        }
+
+        public bool LoadOverlayImage()
+        {
+            var screen = this.Screens[0];
+            if (screen.presentation.overlay != null)
+                return true;
+
+            if (string.IsNullOrEmpty(screen.presentation.overlayPath))
+                return false;
+
+            var filePath = Path.Combine(this.Directory, screen.presentation.overlayPath);
+            if (!File.Exists(filePath))
+                return false;
+
+            var overlayBytes = File.ReadAllBytes(filePath);
+            var texture = new Texture2D(2, 2, TextureFormat.Alpha8, false)
+            {
+                alphaIsTransparency = true
+            };
+
+            if (!texture.LoadImage(overlayBytes, false))
+                return false;
+
+            screen.presentation.overlay = texture;
+            return true;
+        }
+
+        public void AddOptionalFields()
+        {
+            foreach (var screen in Screens)
+            {
+                if (screen.orientations == null || screen.orientations.Length == 0)
+                {
+                    screen.orientations = new[]
+                    {
+                        new OrientationData {orientation = ScreenOrientation.Portrait},
+                        new OrientationData {orientation = ScreenOrientation.PortraitUpsideDown},
+                        new OrientationData {orientation = ScreenOrientation.LandscapeLeft},
+                        new OrientationData {orientation = ScreenOrientation.LandscapeRight}
+                    };
+                }
+                foreach (var orientation in screen.orientations)
+                {
+                    if (orientation.safeArea == Rect.zero)
+                        orientation.safeArea = SimulatorUtilities.IsLandscape(orientation.orientation) ? new Rect(0, 0, screen.height, screen.width) : new Rect(0, 0, screen.width, screen.height);
+                }
+            }
+        }
     }
 
     [Serializable]
-    internal class MetaData
+    internal class ScreenPresentation
     {
-        public string friendlyName;
-        public string overlay;
-        public Vector4 overlayOffset;
-        public Texture overlayImage;
+        public string overlayPath;
+        public Vector4 borderSize;
+        public float cornerRadius;
+        [NonSerialized] public Texture overlay;
     }
 
     [Serializable]
-    internal class ScreenData : ISerializationCallbackReceiver
+    internal class ScreenData
     {
         public int width;
         public int height;
         public int navigationBarHeight;
         public float dpi;
-        public Dictionary<ScreenOrientation, OrientationDependentData> orientations;
-        [SerializeField] private ScreenOrientation[] orientationKeys;
-        [SerializeField] private OrientationDependentData[] orientationValues;
-
-        public void OnBeforeSerialize()
-        {
-            if (orientations == null) return;
-
-            orientationKeys = orientations.Keys.ToArray();
-            orientationValues = orientations.Values.ToArray();
-        }
-
-        public void OnAfterDeserialize()
-        {
-            Assert.AreEqual(orientationKeys.Length, orientationValues.Length);
-            orientations = new Dictionary<ScreenOrientation, OrientationDependentData>();
-            for (int i = 0; i < orientationKeys.Length; i++)
-                orientations.Add(orientationKeys[i], orientationValues[i]);
-        }
+        public OrientationData[] orientations;
+        public ScreenPresentation presentation;
     }
 
     [Serializable]
-    internal class OrientationDependentData
+    internal class OrientationData
     {
+        public ScreenOrientation orientation;
         public Rect safeArea;
         public Rect[] cutouts;
     }
@@ -84,11 +141,11 @@ namespace Unity.DeviceSimulator
         public bool supportsVibration;
         public int systemMemorySize;
         public string unsupportedIdentifier;
-        public GraphicsDependentSystemInfoData[] GraphicsDependentData;
+        public GraphicsSystemInfoData[] graphicsDependentData;
     }
 
     [Serializable]
-    internal class GraphicsDependentSystemInfoData
+    internal class GraphicsSystemInfoData
     {
         public GraphicsDeviceType graphicsDeviceType;
         public int graphicsMemorySize;

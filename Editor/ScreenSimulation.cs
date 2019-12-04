@@ -18,6 +18,7 @@ namespace Unity.DeviceSimulator
 
         private ScreenOrientation m_RenderedOrientation = ScreenOrientation.Portrait;
         private Dictionary<ScreenOrientation, bool> m_AllowedAutoRotation;
+        private Dictionary<ScreenOrientation, OrientationData> m_SupportedOrientations;
 
         private float m_DpiRatio = 1;
 
@@ -45,6 +46,12 @@ namespace Unity.DeviceSimulator
             this.m_DeviceInfo = device;
             m_Screen = device.Screens[0];
 
+            m_SupportedOrientations = new Dictionary<ScreenOrientation, OrientationData>();
+            foreach (var o in m_Screen.orientations)
+            {
+                m_SupportedOrientations.Add(o.orientation, o);
+            }
+
             m_Window = window;
 
             m_InputProvider = inputProvider;
@@ -63,12 +70,12 @@ namespace Unity.DeviceSimulator
             {
                 m_AutoRotation = true;
                 var newOrientation = SimulatorUtilities.RotationToScreenOrientation(m_InputProvider.Rotation);
-                if (m_Screen.orientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
+                if (m_SupportedOrientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
                     ForceNewOrientation(newOrientation);
                 else
                     SetFirstAvailableAutoOrientation();
             }
-            else if (m_Screen.orientations.ContainsKey(settingOrientation))
+            else if (m_SupportedOrientations.ContainsKey(settingOrientation))
             {
                 m_AutoRotation = false;
                 ForceNewOrientation(settingOrientation);
@@ -77,7 +84,7 @@ namespace Unity.DeviceSimulator
             {
                 // At least iPhone X responds to this absolute corner case by crashing, we will not do that.
                 m_AutoRotation = false;
-                ForceNewOrientation(m_Screen.orientations.Keys.ToArray()[0]);
+                ForceNewOrientation(m_SupportedOrientations.Keys.ToArray()[0]);
             }
 
             // Calculate the right resolution.
@@ -110,7 +117,7 @@ namespace Unity.DeviceSimulator
             if (m_AutoRotation)
             {
                 var newOrientation = SimulatorUtilities.RotationToScreenOrientation(rotation);
-                if (m_Screen.orientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
+                if (m_SupportedOrientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
                     ForceNewOrientation(newOrientation);
                 OnOrientationChanged?.Invoke(m_AutoRotation);
             }
@@ -140,8 +147,8 @@ namespace Unity.DeviceSimulator
             if (!m_WasResolutionSet)
             {
                 scaledHeight = scaledNavigationBarHeight;
-                if (m_Screen.orientations.ContainsKey(ScreenOrientation.Portrait))
-                    scaledHeight += Mathf.RoundToInt(m_DpiRatio * (m_Screen.height - m_Screen.orientations[ScreenOrientation.Portrait].safeArea.height));
+                if (m_SupportedOrientations.ContainsKey(ScreenOrientation.Portrait))
+                    scaledHeight += Mathf.RoundToInt(m_DpiRatio * (m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height));
             }
 
             // Always consider the full screen mode width/height to scale the safe area & cutouts.
@@ -158,7 +165,7 @@ namespace Unity.DeviceSimulator
             }
 
             // Scale safe area.
-            var odd = m_Screen.orientations[m_RenderedOrientation];
+            var odd = m_SupportedOrientations[m_RenderedOrientation];
             var sa = odd.safeArea;
             if (m_IsFullScreen)
             {
@@ -250,8 +257,8 @@ namespace Unity.DeviceSimulator
             }
             else
             {
-                var renderedAreaSize = m_Screen.orientations[ScreenOrientation.Portrait].safeArea.size - new Vector2(0, m_Screen.navigationBarHeight);
-                var headerHeight = m_Screen.height - m_Screen.orientations[ScreenOrientation.Portrait].safeArea.height;
+                var renderedAreaSize = m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.size - new Vector2(0, m_Screen.navigationBarHeight);
+                var headerHeight = m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height;
                 switch (m_RenderedOrientation)
                 {
                     case ScreenOrientation.Portrait:
@@ -310,7 +317,7 @@ namespace Unity.DeviceSimulator
 
         private void SetFirstAvailableAutoOrientation()
         {
-            foreach (var newOrientation in m_Screen.orientations.Keys)
+            foreach (var newOrientation in m_SupportedOrientations.Keys)
             {
                 if (m_AllowedAutoRotation[newOrientation])
                 {
@@ -334,7 +341,7 @@ namespace Unity.DeviceSimulator
             width = m_CurrentWidth;
             height = m_CurrentHeight;
 
-            var noFullScreenHeight = m_Screen.orientations[ScreenOrientation.Portrait].safeArea.height - m_Screen.navigationBarHeight;
+            var noFullScreenHeight = m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height - m_Screen.navigationBarHeight;
             float scale = m_IsFullScreen ? m_Screen.height / noFullScreenHeight : noFullScreenHeight / m_Screen.height;
 
             switch (m_RenderedOrientation)
@@ -388,7 +395,7 @@ namespace Unity.DeviceSimulator
                     m_AutoRotation = true;
                     Rotate(m_InputProvider.Rotation);
                 }
-                else if (m_Screen.orientations.ContainsKey(value))
+                else if (m_SupportedOrientations.ContainsKey(value))
                 {
                     m_AutoRotation = false;
                     ForceNewOrientation(value);

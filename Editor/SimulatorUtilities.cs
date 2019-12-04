@@ -1,9 +1,9 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Rendering;
 
 namespace Unity.DeviceSimulator
 {
@@ -25,6 +25,7 @@ namespace Unity.DeviceSimulator
 
     internal class SimulatorJsonSerialization
     {
+        public bool controlPanelHidden = false;
         public int scale = 20;
         public bool fitToScreenEnabled = true;
         public int rotationDegree = 0;
@@ -32,52 +33,6 @@ namespace Unity.DeviceSimulator
         [NonSerialized]
         public Quaternion rotation = Quaternion.identity;
         public string friendlyName = string.Empty;
-    }
-
-    internal static class Extensions
-    {
-        #region DeviceInfo
-        public static bool IsAndroidDevice(this DeviceInfo deviceInfo)
-        {
-            return IsGivenDevice(deviceInfo, "android");
-        }
-
-        public static bool IsiOSDevice(this DeviceInfo deviceInfo)
-        {
-            return IsGivenDevice(deviceInfo, "ios");
-        }
-
-        public static bool IsGivenDevice(this DeviceInfo deviceInfo, string os)
-        {
-            return (deviceInfo?.SystemInfo != null) ? deviceInfo.SystemInfo.operatingSystem.ToLower().Contains(os) : false;
-        }
-
-        public static bool LoadOverlayImage(this DeviceInfo deviceInfo)
-        {
-            if (deviceInfo.Meta.overlayImage != null)
-                return true;
-
-            if (string.IsNullOrEmpty(deviceInfo.Meta.overlay))
-                return false;
-
-            var filePath = Path.Combine(deviceInfo.Directory, deviceInfo.Meta.overlay);
-            if (!File.Exists(filePath))
-                return false;
-
-            var overlayBytes = File.ReadAllBytes(filePath);
-            var texture = new Texture2D(2, 2, TextureFormat.Alpha8, false)
-            {
-                alphaIsTransparency = true
-            };
-
-            if (!texture.LoadImage(overlayBytes, false))
-                return false;
-
-            deviceInfo.Meta.overlayImage = texture;
-            return true;
-        }
-
-        #endregion
     }
 
     internal static class SimulatorUtilities
@@ -160,6 +115,41 @@ namespace Unity.DeviceSimulator
                 orientation == ScreenOrientation.LandscapeRight)
                 return true;
 
+            return false;
+        }
+
+        public static void CheckShimmedAssemblies(List<string> shimmedAssemblies)
+        {
+            if (shimmedAssemblies == null || shimmedAssemblies.Count == 0)
+                return;
+
+            shimmedAssemblies.RemoveAll(string.IsNullOrEmpty);
+
+            const string dll = ".dll";
+            for (int i = 0; i < shimmedAssemblies.Count; i++)
+            {
+                shimmedAssemblies[i] = shimmedAssemblies[i].ToLower();
+                if (!shimmedAssemblies[i].EndsWith(dll))
+                {
+                    shimmedAssemblies[i] += dll;
+                }
+            }
+        }
+
+        public static bool ShouldShim(List<string> shimmedAssemblies)
+        {
+            if (shimmedAssemblies == null || shimmedAssemblies.Count == 0)
+                return false;
+
+            // Here we use StackTrace to trace where the call comes from, only shim if it comes from the white listed assemblies.
+            // 4 in StackTrace stands for the frames that we want to trace back up from here, as below:
+            // SimulatorUtilities.ShouldShim() <-- SystemInfoSimulation/ApplicationSimulation.ShouldShim() <-- ApplicationSimulation <-- Application <-- Where the APIs are called.
+            var callingAssembly = new StackTrace(4).GetFrame(0).GetMethod().Module.ToString().ToLower();
+            foreach (var assembly in shimmedAssemblies)
+            {
+                if (callingAssembly == assembly)
+                    return true;
+            }
             return false;
         }
     }

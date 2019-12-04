@@ -17,12 +17,17 @@ namespace Tests
                 dpi = screenDpi,
                 width = screenWidth,
                 height = screenHeight,
-                orientations = new Dictionary<ScreenOrientation, OrientationDependentData>()
+                orientations = new OrientationData[orientations.Length]
             };
 
             for (int i = 0; i < orientations.Length; i++)
             {
-                screen.orientations.Add(orientations[i], Orientations[i]);
+                screen.orientations[i] = new OrientationData()
+                {
+                    safeArea = Orientations[i].safeArea,
+                    cutouts = Orientations[i].cutouts,
+                    orientation = orientations[i]
+                };
             }
 
             var device = new DeviceInfo()
@@ -32,12 +37,12 @@ namespace Tests
             return device;
         }
 
-        public static OrientationDependentData[] Orientations =
+        public static OrientationData[] Orientations =
         {
-            new OrientationDependentData() {safeArea = new Rect(100, 100, 100, 100)},
-            new OrientationDependentData() {safeArea = new Rect(200, 200, 200, 200)},
-            new OrientationDependentData() {safeArea = new Rect(300, 300, 300, 300)},
-            new OrientationDependentData() {safeArea = new Rect(400, 400, 400, 400)}
+            new OrientationData() {safeArea = new Rect(100, 100, 100, 100)},
+            new OrientationData() {safeArea = new Rect(200, 200, 200, 200)},
+            new OrientationData() {safeArea = new Rect(300, 300, 300, 300)},
+            new OrientationData() {safeArea = new Rect(400, 400, 400, 400)}
         };
     }
 }

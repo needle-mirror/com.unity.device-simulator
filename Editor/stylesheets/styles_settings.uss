@@ -32,11 +32,12 @@
 }
 
 /*Styles for user settings*/
-.user-device-directory-container, .user-safe-area-line-width-container {
+.user-device-directory-container, .user-safe-area-line-width-container, .user-maximum-visible-device-count-container {
     flex-direction: row;
 }
 
 .user-device-directory-field {
+    width: 100px;
     flex-grow: 0.9;
 }
 
@@ -45,11 +46,11 @@
     min-width: 30px;
 }
 
-.user-safe-area-line-color {
+.user-safe-area-line-color, .user-maximum-visible-device-count {
     flex-grow: 1;
 }
 
-.user-safe-area-line-width-label {
+.user-safe-area-line-width-label, .user-maximum-visible-device-count-label {
     margin-left: 3px;
     margin-right: 3px;
     width: 15px;

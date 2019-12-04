@@ -3,10 +3,6 @@
     flex-grow: 1;
 }
 
-.unity-two-pane-split-view--vertical {
-    flex-direction: column;
-}
-
 .unity-two-pane-split-view--horizontal {
     flex-direction: row;
 }
@@ -30,9 +26,6 @@
 .unity-two-pane-split-view__dragline {
     background-color: rgba(0, 0, 0, 0);
     position: absolute;
-}
-
-.unity-two-pane-split-view__dragline--horizontal {
     width: 10px;
     left: -5px;
     top: 0px;
@@ -40,26 +33,9 @@
     cursor: resize-horizontal;
 }
 
-.unity-two-pane-split-view__dragline--vertical {
-    height: 10px;
-    top: -5px;
-    left: 0px;
-    right: 0px;
-    cursor: resize-vertical;
-}
-
 .unity-two-pane-split-view__dragline-anchor {
     position: absolute;
-}
-
-.unity-two-pane-split-view__dragline-anchor--horizontal {
     width: 1px;
     top: 0px;
     bottom: 0px;
-}
-
-.unity-two-pane-split-view__dragline-anchor--vertical {
-    height: 1px;
-    left: 0px;
-    right: 0px;
 }

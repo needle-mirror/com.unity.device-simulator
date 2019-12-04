@@ -17,6 +17,7 @@ namespace Unity.DeviceSimulator
         private SimulationState m_State = SimulationState.Enabled;
         private ScreenSimulation m_ScreenSimulation;
         private SystemInfoSimulation m_SystemInfoSimulation;
+        private ApplicationSimulation m_ApplicationSimulation;
 
         private const string kJsonFileName = "SimulatorWindowStatesJsonFile.json";
         private const string kJsonFileEditorPrefKey = "SimulatorWindowStatesJsonFile";
@@ -24,22 +25,26 @@ namespace Unity.DeviceSimulator
         private InputProvider m_InputProvider;
 
         private DeviceDatabase m_DeviceDatabase;
-        private int CurrentDeviceHandleIndex
+
+        private int CurrentDeviceIndex
         {
-            get => m_CurrentDeviceHandleIndex;
+            get => m_CurrentDeviceIndex;
             set
             {
-                m_CurrentDeviceHandleIndex = value;
-                CurrentDeviceInfo = m_DeviceDatabase.GetDevice(m_CurrentDeviceHandleIndex);
+                m_CurrentDeviceIndex = value;
+                CurrentDeviceInfo = m_DeviceDatabase.GetDevice(m_CurrentDeviceIndex);
             }
         }
-
-        private int m_CurrentDeviceHandleIndex = -1;
+        private int m_CurrentDeviceIndex = -1;
         private DeviceInfo CurrentDeviceInfo;
+
+        private string m_DeviceSearchContent = string.Empty;
 
         private SimulatorJsonSerialization m_SimulatorJsonSerialization = null;
 
-        private ToolbarMenu m_DeviceInfoMenu = null;
+        private VisualElement m_DeviceListMenu = null;
+        private TextElement m_SelectedDeviceName = null;
+
         private ToolbarButton m_DeviceRestart = null;
 
         private TwoPaneSplitView m_Splitter = null;
@@ -112,7 +117,6 @@ namespace Unity.DeviceSimulator
             this.targetSize = new Vector2(CurrentDeviceInfo.Screens[0].width, CurrentDeviceInfo.Screens[0].height);
 
             const string kPackagePath = "packages/com.unity.device-simulator/Editor";
-            rootVisualElement.AddStyleSheetPath($"{kPackagePath}/stylesheets/styles_common.uss");
             rootVisualElement.AddStyleSheetPath($"{kPackagePath}/stylesheets/styles_{(EditorGUIUtility.isProSkin ? "dark" : "light")}.uss");
 
             var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{kPackagePath}/uxmls/ui_device_simulator.uxml");
@@ -129,15 +133,24 @@ namespace Unity.DeviceSimulator
 
             InitToolbar();
             m_Splitter = rootVisualElement.Q<TwoPaneSplitView>("splitter");
+            if (m_SimulatorJsonSerialization != null)
+                m_Splitter.LeftPanelHidden = m_SimulatorJsonSerialization.controlPanelHidden;
 
-            m_ControlPanel = new SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, playerSettings);
+            m_ControlPanel = new SimulatorControlPanel(rootVisualElement.Q<VisualElement>("control-panel"), CurrentDeviceInfo, m_SystemInfoSimulation,
+                m_ScreenSimulation, m_ApplicationSimulation, playerSettings);
+
             m_PreviewPanel = new SimulatorPreviewPanel(rootVisualElement.Q<VisualElement>("preview-panel"), m_InputProvider, CurrentDeviceInfo, m_SimulatorJsonSerialization)
             {
                 TargetOrientation = m_ScreenSimulation.orientation,
                 IsFullScreen = m_ScreenSimulation.fullScreen,
-                OnPreview = this.RenderView,
                 OnControlPanelHiddenChanged = HideControlPanel
             };
+        }
+
+        private void OnGUI()
+        {
+            if (Event.current.type == EventType.Repaint && GetMainPlayModeView() == this)
+                m_PreviewPanel.PreviewTexture = RenderView(Event.current.mousePosition, false);
         }
 
         private void InitSimulation(SimulationPlayerSettings playerSettings)
@@ -155,7 +168,13 @@ namespace Unity.DeviceSimulator
             if (settings.SystemInfoDefaultAssembly)
                 whitelistedAssemblies.Add("Assembly-CSharp.dll");
 
+            SimulatorUtilities.CheckShimmedAssemblies(whitelistedAssemblies);
+
             m_SystemInfoSimulation = new SystemInfoSimulation(CurrentDeviceInfo, playerSettings, whitelistedAssemblies);
+
+            // No need to reinitialize ApplicationSimulation.
+            if (m_ApplicationSimulation == null)
+                m_ApplicationSimulation = new ApplicationSimulation(CurrentDeviceInfo, whitelistedAssemblies);
 
             DeviceSimulatorCallbacks.InvokeOnDeviceChange();
         }
@@ -219,11 +238,12 @@ namespace Unity.DeviceSimulator
         {
             SimulatorJsonSerialization states = new SimulatorJsonSerialization()
             {
+                controlPanelHidden = m_PreviewPanel.ControlPanelHidden,
                 scale = m_PreviewPanel.Scale,
                 fitToScreenEnabled = m_PreviewPanel.FitToScreenEnabled,
                 rotationDegree = m_PreviewPanel.RotationDegree,
                 highlightSafeAreaEnabled = m_PreviewPanel.HighlightSafeAre,
-                friendlyName = CurrentDeviceInfo.Meta.friendlyName
+                friendlyName = CurrentDeviceInfo.friendlyName
             };
 
             var jsonString = JsonUtility.ToJson(states);
@@ -271,7 +291,7 @@ namespace Unity.DeviceSimulator
             m_DeviceDatabase = new DeviceDatabase();
 
             Assert.AreNotEqual(0, m_DeviceDatabase.m_Devices.Count, "No devices found!");
-            CurrentDeviceHandleIndex = 0;
+            CurrentDeviceIndex = 0;
         }
 
         void SetCurrentDeviceIndex()
@@ -281,9 +301,9 @@ namespace Unity.DeviceSimulator
 
             for (int index = 0; index < m_DeviceDatabase.m_Devices.Count; ++index)
             {
-                if (m_DeviceDatabase.m_Devices[index].Meta.friendlyName == m_SimulatorJsonSerialization.friendlyName)
+                if (m_DeviceDatabase.m_Devices[index].friendlyName == m_SimulatorJsonSerialization.friendlyName)
                 {
-                    CurrentDeviceHandleIndex = index;
+                    CurrentDeviceIndex = index;
                     break;
                 }
             }
@@ -301,12 +321,14 @@ namespace Unity.DeviceSimulator
                 playModeViewTypeMenu.menu.AppendAction(type.Value, HandleWindowSelection, HandleWindowSelection => status, type.Key);
             }
 
-            m_DeviceInfoMenu = rootVisualElement.Q<ToolbarMenu>("device-info-menu");
-            m_DeviceInfoMenu.text = CurrentDeviceInfo.Meta.friendlyName;
-            UpdateDeviceInfoMenu();
-
             m_DeviceRestart = rootVisualElement.Q<ToolbarButton>("reload-player-settings");
             m_DeviceRestart.clickable = new Clickable(RestartSimulation);
+
+            m_DeviceListMenu = rootVisualElement.Q<VisualElement>("device-list-menu");
+            m_DeviceListMenu.AddManipulator(new Clickable(ShowDeviceInfoList));
+
+            m_SelectedDeviceName = m_DeviceListMenu.Q<TextElement>("selected-device-name");
+            m_SelectedDeviceName.text = CurrentDeviceInfo.friendlyName;
         }
 
         private void HandleWindowSelection(object typeData)
@@ -314,33 +336,6 @@ namespace Unity.DeviceSimulator
             var type = (Type)((DropdownMenuAction)typeData).userData;
             if (type != null)
                 SwapMainWindow(type);
-        }
-
-        public void HandleDeviceSelection(object userdata)
-        {
-            DropdownMenuAction action = (DropdownMenuAction)userdata;
-            int index = m_DeviceInfoMenu.menu.MenuItems().IndexOf(action);
-            if (index < 0)
-                return;
-
-            if (CurrentDeviceHandleIndex == index)
-                return;
-
-            CurrentDeviceHandleIndex = index;
-            m_DeviceInfoMenu.menu.MenuItems().Clear();
-            m_DeviceInfoMenu.text = CurrentDeviceInfo.Meta.friendlyName;
-            UpdateDeviceInfoMenu();
-
-            RestartSimulation();
-        }
-
-        private void UpdateDeviceInfoMenu()
-        {
-            foreach (var deviceInfo in m_DeviceDatabase.m_Devices)
-            {
-                var status = (deviceInfo.Meta.friendlyName == CurrentDeviceInfo.Meta.friendlyName) ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal;
-                m_DeviceInfoMenu.menu.AppendAction(deviceInfo.Meta.friendlyName, HandleDeviceSelection, HandleDeviceSelection => status);
-            }
         }
 
         private void RestartSimulation()
@@ -351,6 +346,34 @@ namespace Unity.DeviceSimulator
 
             m_ControlPanel.Update(CurrentDeviceInfo, m_SystemInfoSimulation, m_ScreenSimulation, playerSettings);
             m_PreviewPanel.Update(CurrentDeviceInfo, m_ScreenSimulation.fullScreen);
+        }
+
+        private void ShowDeviceInfoList()
+        {
+            var rect = new Rect(m_DeviceListMenu.worldBound.position + new Vector2(1, m_DeviceListMenu.worldBound.height), new Vector2());
+            var maximumVisibleDeviceCount = DeviceSimulatorUserSettingsProvider.LoadOrCreateSettings().MaximumVisibleDeviceCount;
+
+            var deviceListPopup = new DeviceListPopup(m_DeviceDatabase.m_Devices, m_CurrentDeviceIndex, maximumVisibleDeviceCount, m_DeviceSearchContent);
+            deviceListPopup.OnDeviceSelected += OnDeviceSelected;
+            deviceListPopup.OnSearchInput += OnSearchInput;
+
+            UnityEditor.PopupWindow.Show(rect, deviceListPopup);
+        }
+
+        private void OnDeviceSelected(int selectedDeviceIndex)
+        {
+            if (CurrentDeviceIndex == selectedDeviceIndex)
+                return;
+
+            CurrentDeviceIndex = selectedDeviceIndex;
+            m_SelectedDeviceName.text = CurrentDeviceInfo.friendlyName;
+
+            RestartSimulation();
+        }
+
+        private void OnSearchInput(string searchContent)
+        {
+            m_DeviceSearchContent = searchContent;
         }
 
         private void HideControlPanel(bool hidden)
