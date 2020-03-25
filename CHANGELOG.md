@@ -3,12 +3,17 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [2.1.1-preview] - 2019-03-20
+## [2.2.0-preview] - 2020-03-26
+
+### Added
+-  Support for the new Input System. One finger touch.
+
+## [2.1.1-preview] - 2020-03-20
 
 ### Fixed
 -  Case 1229098 Device simulator 2.1.0 has compilation errors in SimulatorWindow class in 2020.1.0b1
 
-## [2.1.0-preview] - 2019-03-04
+## [2.1.0-preview] - 2020-03-04
 
 ### Added
 - Serializing extensions during domain reload.

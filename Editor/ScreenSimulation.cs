@@ -52,7 +52,6 @@ namespace Unity.DeviceSimulator
 
             m_InputProvider = inputProvider;
             m_InputProvider.OnRotation += Rotate;
-            m_InputProvider.OnTouchEvent += HandleTouch;
 
             m_SupportedOrientations = new Dictionary<ScreenOrientation, OrientationData>();
             foreach (var o in m_Screen.orientations)
@@ -292,82 +291,6 @@ namespace Unity.DeviceSimulator
             OnInsetsChanged?.Invoke(inset);
         }
 
-        private void HandleTouch(TouchEvent evt)
-        {
-            var deviceScreen = new Vector2(m_DeviceInfo.Screens[0].width, m_DeviceInfo.Screens[0].height);
-            var actualPosition = Vector2.zero;
-            float scaleX;
-            float scaleY;
-
-            // TODO should be moved to recalculate on orientation, resolution, full screen mode change, no need to calculate every touch
-
-            if (m_IsFullScreen)
-            {
-                switch (m_RenderedOrientation)
-                {
-                    case ScreenOrientation.Portrait:
-                        scaleX = (float)m_CurrentWidth / m_DeviceInfo.Screens[0].width;
-                        scaleY = (float)m_CurrentHeight / m_DeviceInfo.Screens[0].height;
-                        actualPosition = new Vector2(evt.position.x, -evt.position.y + deviceScreen.y);
-                        actualPosition *= new Vector2(scaleX, scaleY);
-                        break;
-                    case ScreenOrientation.PortraitUpsideDown:
-                        scaleX = (float)m_CurrentWidth / m_DeviceInfo.Screens[0].width;
-                        scaleY = (float)m_CurrentHeight / m_DeviceInfo.Screens[0].height;
-                        actualPosition = new Vector2(-evt.position.x + deviceScreen.x, evt.position.y);
-                        actualPosition *= new Vector2(scaleX, scaleY);
-                        break;
-                    case ScreenOrientation.LandscapeLeft:
-                        scaleX = (float)m_CurrentHeight / m_DeviceInfo.Screens[0].width;
-                        scaleY = (float)m_CurrentWidth / m_DeviceInfo.Screens[0].height;
-                        actualPosition = new Vector2(evt.position.y, evt.position.x);
-                        actualPosition *= new Vector2(scaleY, scaleX);
-                        break;
-                    case ScreenOrientation.LandscapeRight:
-                        scaleX = (float)m_CurrentHeight / m_DeviceInfo.Screens[0].width;
-                        scaleY = (float)m_CurrentWidth / m_DeviceInfo.Screens[0].height;
-                        actualPosition = new Vector2(-evt.position.y + deviceScreen.y, -evt.position.x + deviceScreen.x);
-                        actualPosition *= new Vector2(scaleY, scaleX);
-                        break;
-                }
-            }
-            else
-            {
-                var renderedAreaSize = m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.size - new Vector2(0, m_Screen.navigationBarHeight);
-                var headerHeight = m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height;
-                switch (m_RenderedOrientation)
-                {
-                    case ScreenOrientation.Portrait:
-                        scaleX = (float)m_CurrentWidth / renderedAreaSize.x;
-                        scaleY = (float)m_CurrentHeight / renderedAreaSize.y;
-                        actualPosition = new Vector2(evt.position.x, -evt.position.y + deviceScreen.y - m_Screen.navigationBarHeight);
-                        actualPosition *= new Vector2(scaleX, scaleY);
-                        break;
-                    case ScreenOrientation.PortraitUpsideDown:
-                        scaleX = (float)m_CurrentWidth / renderedAreaSize.x;
-                        scaleY = (float)m_CurrentHeight / renderedAreaSize.y;
-                        actualPosition = new Vector2(-evt.position.x + deviceScreen.x, evt.position.y - headerHeight - m_Screen.navigationBarHeight);
-                        actualPosition *= new Vector2(scaleX, scaleY);
-                        break;
-                    case ScreenOrientation.LandscapeLeft:
-                        scaleX = (float)m_CurrentHeight / renderedAreaSize.x;
-                        scaleY = (float)m_CurrentWidth / renderedAreaSize.y;
-                        actualPosition = new Vector2(evt.position.y - headerHeight, evt.position.x);
-                        actualPosition *= new Vector2(scaleY, scaleX);
-                        break;
-                    case ScreenOrientation.LandscapeRight:
-                        scaleX = (float)m_CurrentHeight / renderedAreaSize.x;
-                        scaleY = (float)m_CurrentWidth / renderedAreaSize.y;
-                        actualPosition = new Vector2(-evt.position.y + deviceScreen.y - m_Screen.navigationBarHeight, -evt.position.x + deviceScreen.x);
-                        actualPosition *= new Vector2(scaleY, scaleX);
-                        break;
-                }
-            }
-
-            actualPosition = new Vector2(Mathf.Round(actualPosition.x), Mathf.Round(actualPosition.y));
-            Input.SimulateTouch(0, actualPosition, evt.phase);
-        }
-
         private void SetAutoRotationOrientation(ScreenOrientation orientation, bool value)
         {
             m_AllowedAutoRotation[orientation] = value;
@@ -446,8 +369,6 @@ namespace Unity.DeviceSimulator
         public new void Dispose()
         {
             m_InputProvider.OnRotation -= Rotate;
-            m_InputProvider.OnTouchEvent -= HandleTouch;
-
             Disable();
         }
 

@@ -111,7 +111,6 @@ namespace Unity.DeviceSimulator.Tests
     internal class TestInput : IInputProvider
     {
         public Action<Quaternion> OnRotation { get; set; }
-        public Action<TouchEvent> OnTouchEvent { get; set; }
         public Quaternion Rotation { get; set; }
 
         public void Rotate(ScreenOrientation orientation)

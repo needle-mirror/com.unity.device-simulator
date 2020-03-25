@@ -6,8 +6,6 @@ namespace Unity.DeviceSimulator
     internal class TouchEventManipulator : MouseManipulator
     {
         public Matrix4x4 PreviewImageRendererSpaceToScreenSpace { get; set; }
-
-        private bool m_IsActive = false;
         private InputProvider m_InputProvider = null;
 
         public TouchEventManipulator(InputProvider inputProvider)
@@ -34,42 +32,26 @@ namespace Unity.DeviceSimulator
 
         private void OnMouseDown(MouseDownEvent evt)
         {
-            TriggerTouchEvent(evt.localMousePosition, TouchPhase.Began);
-            m_IsActive = true;
+            var position = PreviewImageRendererSpaceToScreenSpace.MultiplyPoint(evt.localMousePosition);
+            m_InputProvider.TouchFromMouse(position, MouseEvent.Start);
         }
 
         private void OnMouseMove(MouseMoveEvent evt)
         {
-            if (m_IsActive)
-                TriggerTouchEvent(evt.localMousePosition, TouchPhase.Moved);
+            var position = PreviewImageRendererSpaceToScreenSpace.MultiplyPoint(evt.localMousePosition);
+            m_InputProvider.TouchFromMouse(position, MouseEvent.Move);
         }
 
         private void OnMouseUp(MouseUpEvent evt)
         {
-            if (m_IsActive)
-            {
-                TriggerTouchEvent(evt.localMousePosition, TouchPhase.Ended);
-                m_IsActive = false;
-            }
+            var position = PreviewImageRendererSpaceToScreenSpace.MultiplyPoint(evt.localMousePosition);
+            m_InputProvider.TouchFromMouse(position, MouseEvent.End);
         }
 
         private void OnMouseLeave(MouseLeaveEvent evt)
         {
-            if (m_IsActive)
-            {
-                TriggerTouchEvent(evt.localMousePosition, TouchPhase.Canceled);
-                m_IsActive = false;
-            }
-        }
-
-        private void TriggerTouchEvent(Vector2 mousePosition, TouchPhase touchPhase)
-        {
-            var touchEvent = new TouchEvent()
-            {
-                position = PreviewImageRendererSpaceToScreenSpace.MultiplyPoint(mousePosition),
-                phase = touchPhase
-            };
-            m_InputProvider.InvokeOnTouchEvent(touchEvent);
+            var position = PreviewImageRendererSpaceToScreenSpace.MultiplyPoint(evt.localMousePosition);
+            m_InputProvider.TouchFromMouse(position, MouseEvent.End);
         }
     }
 }

@@ -18,8 +18,7 @@ namespace Unity.DeviceSimulator
         private SystemInfoSimulation m_SystemInfoSimulation;
         private ApplicationSimulation m_ApplicationSimulation;
 
-        [SerializeField]
-        private InputProvider m_InputProvider = new InputProvider();
+        private InputProvider m_InputProvider;
 
         private DeviceDatabase m_DeviceDatabase;
 
@@ -77,6 +76,10 @@ namespace Unity.DeviceSimulator
 
         void OnEnable()
         {
+            m_InputProvider = new InputProvider();
+            if (m_SimulatorSerializationStates != null)
+                m_InputProvider.Rotation = m_SimulatorSerializationStates.rotation;
+
             autoRepaintOnSceneChange = true;
 
             var tileImage = AssetDatabase.LoadAssetAtPath<Texture2D>("packages/com.unity.device-simulator/Editor/icons/title.png");
@@ -136,6 +139,8 @@ namespace Unity.DeviceSimulator
             targetSize = new Vector2(m_ScreenSimulation.currentResolution.width, m_ScreenSimulation.currentResolution.height);
             m_ScreenSimulation.OnResolutionChanged += (width, height) => { targetSize = new Vector2(width, height); };
 
+            m_InputProvider.InitTouchInput(CurrentDeviceInfo.Screens[0].width, CurrentDeviceInfo.Screens[0].height, m_ScreenSimulation);
+
             m_SystemInfoSimulation?.Dispose();
 
             var settings = DeviceSimulatorProjectSettingsProvider.LoadOrCreateSettings();
@@ -191,6 +196,7 @@ namespace Unity.DeviceSimulator
 
         private void OnDisable()
         {
+            m_InputProvider?.Dispose();
             m_ScreenSimulation.Dispose();
             m_SystemInfoSimulation.Dispose();
         }

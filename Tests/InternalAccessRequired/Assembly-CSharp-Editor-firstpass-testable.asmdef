@@ -4,7 +4,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Unity.DeviceSimulator.Editor",
-        "Unity.DeviceSimulator.Runtime"
+        "Unity.DeviceSimulator.Runtime",
+        "Unity.DeviceSimulator.Tests.Common"
     ],
     "includePlatforms": [
         "Editor"
@@ -19,5 +20,6 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": []
+    "versionDefines": [],
+    "noEngineReferences": false
 }
