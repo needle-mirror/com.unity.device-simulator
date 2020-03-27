@@ -1,7 +1,7 @@
 {
   "name": "com.unity.device-simulator",
   "displayName": "Device Simulator",
-  "version": "2.2.0-preview",
+  "version": "2.2.1-preview",
   "unity": "2019.3",
   "unityRelease": "0f1",
   "description": "Device Simulator is an alternative to the traditional Unity editor Game window. By simulating Screen and SystemInfo class behavior, Device Simulator aims to give an accurate picture of how an app will look on a device.",
@@ -11,9 +11,9 @@
   ],
   "dependencies": {},
   "repository": {
-    "footprint": "c253aa8f57abceab58eceb4d02959cd66c9ced53",
+    "footprint": "751f32d87d9d01f1bc6b6c5f337a5df3e6296bfd",
     "type": "git",
     "url": "https://github.com/Unity-Technologies/com.unity.device-simulator.git",
-    "revision": "1574d379400529af5199f698281335d503754b30"
+    "revision": "a62bcf4dbddd2fd2fe406b30630724e162233476"
   }
 }
