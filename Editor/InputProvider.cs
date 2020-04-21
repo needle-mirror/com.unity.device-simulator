@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
 {
-    internal enum MouseEvent { Start, Move, End }
+    internal enum MousePhase { Start, Move, End }
 
     internal class InputProvider : IInputProvider, IDisposable
     {
@@ -19,6 +19,8 @@ namespace Unity.DeviceSimulator
         private Quaternion m_Rotation = Quaternion.identity;
 
         public Action<Quaternion> OnRotation { get; set; }
+        public Vector2 PointerPosition { private set; get; }
+        public bool IsPointerInsideDeviceScreen { private set; get; }
 
         public Quaternion Rotation
         {
@@ -32,6 +34,8 @@ namespace Unity.DeviceSimulator
 
         public InputProvider()
         {
+            PointerPosition = new Vector2(-1, -1);
+            IsPointerInsideDeviceScreen = false;
             m_InputBackends = new List<IInputBackend>();
 #if INPUT_SYSTEM_INSTALLED
             var playerSettings = Resources.FindObjectsOfTypeAll<PlayerSettings>()[0];
@@ -56,53 +60,86 @@ namespace Unity.DeviceSimulator
             CancelAllTouches();
         }
 
-        public void TouchFromMouse(Vector2 position, MouseEvent mouseEvent)
+        public void TouchFromMouse(Vector2 position, MousePhase mousePhase)
         {
-            if (!Application.isPlaying) return;
+            if (!EditorApplication.isPlaying || EditorApplication.isPaused)
+                return;
 
-            if (!m_TouchFromMouseActive && mouseEvent != MouseEvent.Start)
+            // Clamping position inside the device screen. UI element that sends input events also includes the device border and we don't want to register inputs there.
+            IsPointerInsideDeviceScreen = true;
+            if (position.x < 0)
+            {
+                position.x = 0;
+                IsPointerInsideDeviceScreen = false;
+            }
+            else if (position.x > m_ScreenWidth)
+            {
+                position.x = m_ScreenWidth;
+                IsPointerInsideDeviceScreen = false;
+            }
+            if (position.y < 0)
+            {
+                position.y = 0;
+                IsPointerInsideDeviceScreen = false;
+            }
+            else if (position.y > m_ScreenHeight)
+            {
+                position.y = m_ScreenHeight;
+                IsPointerInsideDeviceScreen = false;
+            }
+
+            PointerPosition = ScreenPixelToTouchCoordinate(position);
+
+            if (!m_TouchFromMouseActive && mousePhase != MousePhase.Start)
                 return;
 
             var phase = SimulatorTouchPhase.None;
 
-            // Case when we are not actually hitting the screen
-            if (position.x < 0 || position.y < 0 || position.x > m_ScreenWidth || position.y > m_ScreenHeight)
+            if (!IsPointerInsideDeviceScreen)
             {
-                if (mouseEvent == MouseEvent.Start) return;
-                else if (mouseEvent == MouseEvent.Move || mouseEvent == MouseEvent.End)
+                switch (mousePhase)
                 {
-                    phase = SimulatorTouchPhase.Ended;
-                    m_TouchFromMouseActive = false;
+                    case MousePhase.Start:
+                        return;
+                    case MousePhase.Move:
+                    case MousePhase.End:
+                        phase = SimulatorTouchPhase.Ended;
+                        m_TouchFromMouseActive = false;
+                        break;
                 }
-
-                if (position.x < 0)
-                    position.x = 0;
-                else if (position.x > m_ScreenWidth)
-                    position.x = m_ScreenWidth;
-
-                if (position.y < 0)
-                    position.y = 0;
-                else if (position.y > m_ScreenHeight)
-                    position.y = m_ScreenHeight;
             }
             else
             {
-                switch (mouseEvent)
+                switch (mousePhase)
                 {
-                    case MouseEvent.Start:
+                    case MousePhase.Start:
                         phase = SimulatorTouchPhase.Began;
                         m_TouchFromMouseActive = true;
                         break;
-                    case MouseEvent.Move:
+                    case MousePhase.Move:
                         phase = SimulatorTouchPhase.Moved;
                         break;
-                    case MouseEvent.End:
+                    case MousePhase.End:
                         phase = SimulatorTouchPhase.Ended;
                         m_TouchFromMouseActive = false;
                         break;
                 }
             }
 
+            foreach (var inputBackend in m_InputBackends)
+            {
+                inputBackend.Touch(0, PointerPosition, phase);
+            }
+        }
+
+        /// <summary>
+        /// Converting from screen pixel to coordinates that are returned by input. Input coordinates change depending on:
+        /// current resolution, full screen or not (insets), and orientation.
+        /// </summary>
+        /// <param name="position">Pixel position in portrait orientation, with origin at the top left corner</param>
+        /// <returns>Position dependent on current resolution, insets and orientation, with origin at the bottom left of the rendered rect in the current orientation.</returns>
+        private Vector2 ScreenPixelToTouchCoordinate(Vector2 position)
+        {
             // First calculating which pixel is being touched inside the pixel rect where game is rendered in portrait orientation, due to insets this might not be full screen
             var renderedAreaPortraitWidth = m_ScreenWidth - m_ScreenSimulation.Insets.x - m_ScreenSimulation.Insets.z;
             var renderedAreaPortraitHeight = m_ScreenHeight - m_ScreenSimulation.Insets.y - m_ScreenSimulation.Insets.w;
@@ -147,11 +184,7 @@ namespace Unity.DeviceSimulator
                 scaleY = m_ScreenSimulation.Height / renderedAreaPortraitHeight;
             }
 
-            var actualPosition = new Vector2(touchedPixelX * scaleX, touchedPixelY * scaleY);
-            foreach (var inputBackend in m_InputBackends)
-            {
-                inputBackend.Touch(0, actualPosition, phase);
-            }
+            return new Vector2(touchedPixelX * scaleX, touchedPixelY * scaleY);
         }
 
         public void CancelAllTouches()

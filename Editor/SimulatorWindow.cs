@@ -122,12 +122,42 @@ namespace Unity.DeviceSimulator
 
         private void OnGUI()
         {
-            if (Event.current.type == EventType.Repaint && GetMainPlayModeView() == this)
+            if (GetMainPlayModeView() != this)
+                return;
+
+            var type = Event.current.type;
+
+            if (type == EventType.Repaint)
             {
-                var previewTexture = RenderView(Event.current.mousePosition, false);
+                var mousePositionInUICoordinates = new Vector2(m_InputProvider.PointerPosition.x, m_ScreenSimulation.Height - m_InputProvider.PointerPosition.y);
+                var previewTexture = RenderView(mousePositionInUICoordinates, false);
                 m_PreviewPanel.PreviewTexture = previewTexture.IsCreated() ? previewTexture : null;
                 CurrentDeviceInfo?.LoadOverlayImage();
                 m_PreviewPanel.OverlayTexture = CurrentDeviceInfo?.Screens[0].presentation.overlay;
+            }
+            else if (type != EventType.Layout && type != EventType.Used)
+            {
+                if (!EditorApplication.isPlaying || EditorApplication.isPaused)
+                    return;
+
+                // MouseDown events outside game view rect are not send to scripts but MouseUp events are (see below)
+                if (Event.current.rawType == EventType.MouseDown && !m_InputProvider.IsPointerInsideDeviceScreen)
+                    return;
+
+                var editorMousePosition = Event.current.mousePosition;
+                Event.current.mousePosition = new Vector2(m_InputProvider.PointerPosition.x, m_ScreenSimulation.Height - m_InputProvider.PointerPosition.y);
+
+                EditorGUIUtility.QueueGameViewInputEvent(Event.current);
+
+                var useEvent = !(Event.current.rawType == EventType.MouseUp && !m_InputProvider.IsPointerInsideDeviceScreen);
+
+                if (type == EventType.ExecuteCommand || type == EventType.ValidateCommand)
+                    useEvent = false;
+
+                if (useEvent)
+                    Event.current.Use();
+                else
+                    Event.current.mousePosition = editorMousePosition;
             }
         }
 
@@ -197,8 +227,9 @@ namespace Unity.DeviceSimulator
         private void OnDisable()
         {
             m_InputProvider?.Dispose();
-            m_ScreenSimulation.Dispose();
-            m_SystemInfoSimulation.Dispose();
+            m_ScreenSimulation?.Dispose();
+            m_SystemInfoSimulation?.Dispose();
+            m_ApplicationSimulation?.Dispose();
         }
 
         private void BeforeSerializeStates()

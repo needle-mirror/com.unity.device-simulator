@@ -172,22 +172,6 @@ namespace Unity.DeviceSimulator
                     DrawSafeArea();
                 }
             }
-
-            if (type != EventType.Repaint && type != EventType.Layout && type != EventType.Used)
-            {
-                var useEvent = true;
-                if (!Event.current.isKey || (!EditorApplication.isPlaying || EditorApplication.isPaused))
-                    return;
-
-                EditorGUIUtility.QueueGameViewInputEvent(Event.current);
-
-                // Don't use command events, or they won't be sent to other views.
-                if (type == EventType.ExecuteCommand || type == EventType.ValidateCommand)
-                    useEvent = false;
-
-                if (useEvent)
-                    Event.current.Use();
-            }
         }
 
         private void DrawSafeArea()
@@ -316,7 +300,12 @@ namespace Unity.DeviceSimulator
             vertices[2] = new Vector3(m_ScreenWidth - ScreenInsets.z, m_ScreenHeight - ScreenInsets.w, Vertex.nearZ);
             vertices[3] = new Vector3(ScreenInsets.x, m_ScreenHeight - ScreenInsets.w, Vertex.nearZ);
 
-            var portraitUvs = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+            Vector2[] portraitUvs;
+            if (SystemInfo.graphicsUVStartsAtTop)
+                portraitUvs = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+            else
+                portraitUvs = new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
+
             var uvs = new Vector2[4];
 
             var startPos = 0;

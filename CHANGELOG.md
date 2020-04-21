@@ -3,6 +3,16 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.2.2-preview] - 2020-04-22
+
+### Changed
+- Only left mouse click is used for touch simulation. Right click used to work. That was not intended and caused issues when both buttons were pressed.
+
+### Fixed
+- Case 1215351 Screen is flipped vertically when the editor is using OpenGL.
+- IMGUI input is no longer registered in the wrong place.
+- Old Input touches transition to Stationary phase. Used to get stuck in the Moved phase, even when the cursor was stationary.
+
 ## [2.2.1-preview] - 2020-03-28
 
 ### Fixed
