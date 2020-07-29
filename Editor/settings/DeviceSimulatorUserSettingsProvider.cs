@@ -40,7 +40,7 @@ namespace Unity.DeviceSimulator
         {
             var settings = LoadOrCreateSettings();
 
-            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/ui_user_settings.uxml");
+            var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/SimulatorResources/UXML/ui_user_settings.uxml");
             visualTree.CloneTree(rootElement);
             rootElement.Bind(new SerializedObject(settings));
 

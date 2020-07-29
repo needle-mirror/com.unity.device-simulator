@@ -78,18 +78,6 @@ namespace Unity.DeviceSimulator
 
         private void SetResolution()
         {
-            // For now limit width & height from 1 to 9999.
-            if (m_ScreenWidthField.value < 1 || m_ScreenWidthField.value > 9999)
-            {
-                Debug.LogWarning("Screen width can only be from 1 to 9999");
-                return;
-            }
-            if (m_ScreenHeightField.value < 1 || m_ScreenHeightField.value > 9999)
-            {
-                Debug.LogWarning("Screen height can only be from 1 to 9999");
-                return;
-            }
-
             Screen.SetResolution(m_ScreenWidthField.value, m_ScreenHeightField.value, Screen.fullScreen);
         }
 

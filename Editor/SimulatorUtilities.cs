@@ -46,6 +46,9 @@ namespace Unity.DeviceSimulator
 
         public bool highlightSafeAreaEnabled = false;
         public string friendlyName = string.Empty;
+
+        public NetworkReachability networkReachability = NetworkReachability.NotReachable;
+        public SystemLanguage systemLanguage = SystemLanguage.English;
     }
 
     internal static class SimulatorUtilities

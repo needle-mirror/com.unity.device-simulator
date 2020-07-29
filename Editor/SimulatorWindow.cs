@@ -10,9 +10,11 @@ using UnityEngine.UIElements;
 
 namespace Unity.DeviceSimulator
 {
-    [EditorWindowTitle(title = "Simulator", useTypeNameAsIconName = true)]
+    [EditorWindowTitle(title = "Simulator", icon = "packages/com.unity.device-simulator/SimulatorResources/Icons/UnityEditor.DeviceSimulation.SimulatorWindow.png")]
     internal class SimulatorWindow : PlayModeView, IHasCustomMenu, ISerializationCallbackReceiver
     {
+        const string kResourcesPath = "packages/com.unity.device-simulator/SimulatorResources";
+
         private SimulationState m_State = SimulationState.Enabled;
         private ScreenSimulation m_ScreenSimulation;
         private SystemInfoSimulation m_SystemInfoSimulation;
@@ -36,17 +38,16 @@ namespace Unity.DeviceSimulator
 
         private string m_DeviceSearchContent = string.Empty;
 
-        [SerializeField]
-        private SimulatorSerializationStates m_SimulatorSerializationStates = null;
+        [SerializeField] private SimulatorSerializationStates m_SimulatorSerializationStates;
 
-        private VisualElement m_DeviceListMenu = null;
-        private TextElement m_SelectedDeviceName = null;
+        private VisualElement m_DeviceListMenu;
+        private TextElement m_SelectedDeviceName;
 
-        private ToolbarButton m_DeviceRestart = null;
+        private ToolbarButton m_DeviceRestart;
 
-        private TwoPaneSplitView m_Splitter = null;
-        private SimulatorControlPanel m_ControlPanel = null;
-        private SimulatorPreviewPanel m_PreviewPanel = null;
+        private TwoPaneSplitView m_Splitter;
+        private SimulatorControlPanel m_ControlPanel;
+        private SimulatorPreviewPanel m_PreviewPanel;
 
         public Action OnWindowFocus { get; set; }
 
@@ -76,14 +77,15 @@ namespace Unity.DeviceSimulator
 
         void OnEnable()
         {
+            var titleImagePath = EditorGUIUtility.isProSkin ? $"{kResourcesPath}/Icons/d_UnityEditor.DeviceSimulation.SimulatorWindow" : $"{kResourcesPath}/Icons/UnityEditor.DeviceSimulation.SimulatorWindow";
+            titleImagePath += EditorGUIUtility.pixelsPerPoint > 1.5 ? "@2x.png" : ".png";
+            titleContent = new GUIContent("Simulator", AssetDatabase.LoadAssetAtPath<Texture2D>(titleImagePath));
+
             m_InputProvider = new InputProvider();
             if (m_SimulatorSerializationStates != null)
                 m_InputProvider.Rotation = m_SimulatorSerializationStates.rotation;
 
             autoRepaintOnSceneChange = true;
-
-            var tileImage = AssetDatabase.LoadAssetAtPath<Texture2D>("packages/com.unity.device-simulator/Editor/icons/title.png");
-            this.titleContent = new GUIContent("Simulator", tileImage);
 
             InitDeviceInfoList();
             SetCurrentDeviceIndex(m_SimulatorSerializationStates, false);
@@ -95,10 +97,9 @@ namespace Unity.DeviceSimulator
             this.renderIMGUI = true;
             this.targetSize = new Vector2(CurrentDeviceInfo.Screens[0].width, CurrentDeviceInfo.Screens[0].height);
 
-            const string kPackagePath = "packages/com.unity.device-simulator/Editor";
-            rootVisualElement.AddStyleSheetPath($"{kPackagePath}/stylesheets/styles_{(EditorGUIUtility.isProSkin ? "dark" : "light")}.uss");
+            rootVisualElement.styleSheets.Add(AssetDatabase.LoadAssetAtPath<StyleSheet>($"{kResourcesPath}/StyleSheets/styles_{(EditorGUIUtility.isProSkin ? "dark" : "light")}.uss"));
 
-            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{kPackagePath}/uxmls/ui_device_simulator.uxml");
+            var asset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>($"{kResourcesPath}/UXML/ui_device_simulator.uxml");
             asset.CloneTree(rootVisualElement);
 
             var playerSettings = new SimulationPlayerSettings();
@@ -273,7 +274,7 @@ namespace Unity.DeviceSimulator
             }
         }
 
-#if UNITY_2020_1_OR_NEWER
+#if UNITY_2019_4_OR_NEWER
         public void OnBeforeSerialize()
         {
             BeforeSerializeStates();

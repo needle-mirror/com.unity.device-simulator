@@ -27,7 +27,7 @@ namespace Unity.DeviceSimulator
 
             provider.activateHandler = (searchContext, rootElement) =>
             {
-                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/uxmls/ui_project_settings.uxml");
+                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/SimulatorResources/UXML/ui_project_settings.uxml");
                 visualTree.CloneTree(rootElement);
                 rootElement.Bind(provider.SerializedSettings);
             };

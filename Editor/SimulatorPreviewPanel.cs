@@ -139,7 +139,7 @@ namespace Unity.DeviceSimulator
 
             #region Rotate
             var namePostfix = EditorGUIUtility.isProSkin ? "_dark" : "_light";
-            const string iconPath = "packages/com.unity.device-simulator/Editor/icons";
+            const string iconPath = "packages/com.unity.device-simulator/SimulatorResources/Icons";
 
             m_RootElement.Q<Image>("rotate-cw-image").image = AssetDatabase.LoadAssetAtPath<Texture2D>($"{iconPath}/rotate_cw{namePostfix}.png");
             m_RootElement.Q<VisualElement>("rotate-cw").AddManipulator(new Clickable(RotateDeviceCW));
@@ -191,7 +191,7 @@ namespace Unity.DeviceSimulator
         {
             m_InactiveMsgContainer = m_RootElement.Q<VisualElement>("inactive-msg-container");
             var closeInactiveMsg = m_RootElement.Q<Image>("close-inactive-msg");
-            closeInactiveMsg.image = AssetDatabase.LoadAssetAtPath<Texture2D>($"packages/com.unity.device-simulator/Editor/icons/close_button.png");
+            closeInactiveMsg.image = AssetDatabase.LoadAssetAtPath<Texture2D>($"packages/com.unity.device-simulator/SimulatorResources/Icons/close_button.png");
             closeInactiveMsg.AddManipulator(new Clickable(CloseInactiveMsg));
 
             SetInactiveMsgState(false);

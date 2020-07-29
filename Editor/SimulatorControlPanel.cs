@@ -22,7 +22,7 @@ namespace Unity.DeviceSimulator
 
             m_DeviceSpecifications = new SimulatorDeviceSpecificationsUI(m_RootElement.Q<Foldout>("device-specifications"), deviceInfo, systemInfoSimulation);
             m_SimulatorScreenSettings = new SimulatorScreenSettingsUI(m_RootElement.Q<Foldout>("screen-settings"), deviceInfo, screenSimulation, playerSettings);
-            m_SimulatorApplicationSettings = new SimulatorApplicationSettingsUI(m_RootElement.Q<Foldout>("application-settings"), applicationSimulation);
+            m_SimulatorApplicationSettings = new SimulatorApplicationSettingsUI(m_RootElement.Q<Foldout>("application-settings"), applicationSimulation, states);
             m_SimulatorExtensions = new SimulatorExtensions();
 
             foreach (var extension in m_SimulatorExtensions.Extensions)
@@ -60,6 +60,8 @@ namespace Unity.DeviceSimulator
                 var serializedExtension = JsonUtility.ToJson(extension);
                 states.extensions.Add(extension.GetType().ToString(), serializedExtension);
             }
+
+            m_SimulatorApplicationSettings.StoreSerializationStates(ref states);
         }
 
         // TODO get rid of this method when we deprecate DeserializeView, currently exists as a hack

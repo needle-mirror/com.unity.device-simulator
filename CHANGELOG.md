@@ -3,6 +3,15 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.2.3-preview] - 2020-07-29
+
+### Fixed
+- Case 1258816 Installing Device Simulator package results in 'TwoPaneSplitView' error.
+- Case 1247506 [Device Simulator] resets Application Settings when entering Play Mode.
+- Case 1228680 An error is thrown when trying to retrieve/load Device Simulator window icon.
+- Failing to create RenderTexture when resolution is set to 0.
+- Fixed simulator window style in personal theme. New icons and matching divider colors.
+
 ## [2.2.2-preview] - 2020-04-22
 
 ### Changed

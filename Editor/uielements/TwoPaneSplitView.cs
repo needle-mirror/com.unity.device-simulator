@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.UIElements;
 
-namespace UnityEditor.UIElements
+namespace Unity.DeviceSimulator
 {
     /// <summary>
     /// Borrow from https://github.com/Unity-Technologies/UIElementsExamples/tree/2019.1.1f1/Assets/Examples/Editor/TwoPaneSplitView.
