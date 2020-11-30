@@ -76,7 +76,7 @@ namespace Unity.DeviceSimulator
 
         // Controls for preview.
         private VisualElement m_ScrollViewContainer;
-        private VisualElement m_ScrollView;
+        private ScrollView m_ScrollView;
         private VisualElement m_PreviewRendererContainer;
         private DeviceView m_PreviewRenderer;
 
@@ -113,6 +113,7 @@ namespace Unity.DeviceSimulator
                 m_ScaleValueLabel.text = Scale.ToString();
                 m_FitToScreenToggle.SetValueWithoutNotify(m_FitToScreenEnabled);
                 m_HighlightSafeAreaToggle.SetValueWithoutNotify(HighlightSafeArea);
+                UpdateScrollbars();
             }
         }
 
@@ -227,6 +228,7 @@ namespace Unity.DeviceSimulator
             m_FitToScreenEnabled = evt.newValue;
             if (m_FitToScreenEnabled)
                 FitToScreenScale();
+            UpdateScrollbars();
         }
 
         private void FitToScreenScale()
@@ -316,8 +318,23 @@ namespace Unity.DeviceSimulator
             SetInactiveMsgState(simulationState == SimulationState.Disabled);
         }
 
+        // Fix Case 1227475, something's wrong with preview window size calculations when scroll bars are visible
+        // Thus during FitToScreen the preview window goes out of bounds
+        // Disabling scrollbars when FitToScreen is true fixes out of bounds issue
+        private void UpdateScrollbars()
+        {
+            m_ScrollView.showHorizontal = m_ScrollView.showVertical = !m_FitToScreenEnabled;
+        }
+
         private void OnGeometryChanged(GeometryChangedEvent evt)
         {
+            // The reason why we call UpdateScrollbars here and not tie to m_FitToScreenEnabled setter
+            // is related to yet another bug in ScrollView.OnGeometryChanged
+            // it seems it doesn't respect what's set in showHorizontal/showVertical
+            // and calls UpdateScrollers with unexpected values on next OnGeometryChanged
+            // UI guys told me that showHorizontal/showVertical are used to force show scrollbars, which is unexpected
+            // since 'false' is also an acceptable value
+            UpdateScrollbars();
             if (m_FitToScreenEnabled)
                 FitToScreenScale();
 

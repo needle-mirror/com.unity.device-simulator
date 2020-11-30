@@ -38,14 +38,18 @@ namespace Unity.DeviceSimulator
             IsPointerInsideDeviceScreen = false;
             m_InputBackends = new List<IInputBackend>();
 #if INPUT_SYSTEM_INSTALLED
-            var playerSettings = Resources.FindObjectsOfTypeAll<PlayerSettings>()[0];
-            var so = new SerializedObject(playerSettings);
-            var enableNativePlatformBackendsForNewInputSystem = so.FindProperty("enableNativePlatformBackendsForNewInputSystem");
-            var disableOldInputManagerSupport = so.FindProperty("disableOldInputManagerSupport");
-
-            if (enableNativePlatformBackendsForNewInputSystem.boolValue)
+            var playerSettings = PlayerSettings.GetSerializedObject();
+#if UNITY_2020_2_OR_NEWER
+            var activeInputHandler = playerSettings.FindProperty("activeInputHandler").intValue;
+            var newSystemEnabled = activeInputHandler == 1 || activeInputHandler == 2;
+            var oldSystemEnabled = activeInputHandler == 0 || activeInputHandler == 2;
+#else
+            var newSystemEnabled = playerSettings.FindProperty("enableNativePlatformBackendsForNewInputSystem").boolValue;
+            var oldSystemEnabled = !playerSettings.FindProperty("disableOldInputManagerSupport").boolValue;
+#endif
+            if (newSystemEnabled)
                 m_InputBackends.Add(new InputSystemBackend());
-            if (!disableOldInputManagerSupport.boolValue)
+            if (oldSystemEnabled)
                 m_InputBackends.Add(new LegacyInputBackend());
 #else
             m_InputBackends.Add(new LegacyInputBackend());

@@ -3,6 +3,14 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.2.4-preview] - 2020-11-30
+
+### Fixed
+- Case 1253362 Screen.SafeArea returns different values with the same device when maximizing and unmaximizing the Device Simulator window.
+- Case 1227475 Device Simulator does not fit into the window when minimizing the Simulator window while 'Fit To Screen' is turned on.
+- Case 1284136 Device Simulator window is empty and NullReferenceException is thrown when Input System package is installed.
+- Case 1269790 UnauthorizedAccessException errors are thrown when selecting Device Simulator tab in the Project Settings.
+
 ## [2.2.3-preview] - 2020-07-29
 
 ### Fixed

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
@@ -14,8 +15,8 @@ namespace Unity.DeviceSimulator
         {
         }
 
-        private static DeviceSimulatorProjectSettings lastSettings;
-
+        private static string s_FailedToSaveError = $"Failed to save Device Simulator project settings file {k_SettingsPath}. Make sure the settings file is writable.";
+        private static DeviceSimulatorProjectSettings s_LastSettings;
         private const string k_SettingsPath = "ProjectSettings/DeviceSimulatorSettings.asset";
 
         private SerializedObject SerializedSettings => new SerializedObject(LoadOrCreateSettings());
@@ -37,24 +38,46 @@ namespace Unity.DeviceSimulator
 
         public static DeviceSimulatorProjectSettings LoadOrCreateSettings()
         {
-            if (lastSettings != null)
-                return lastSettings;
+            if (s_LastSettings != null)
+                return s_LastSettings;
 
             DeviceSimulatorProjectSettings settings = ScriptableObject.CreateInstance<DeviceSimulatorProjectSettings>();;
             if (File.Exists(k_SettingsPath))
             {
-                var assetJson = File.ReadAllText(k_SettingsPath);
-                JsonUtility.FromJsonOverwrite(assetJson, settings);
+                var settingsJson = File.ReadAllText(k_SettingsPath);
+                JsonUtility.FromJsonOverwrite(settingsJson, settings);
             }
 
-            lastSettings = settings;
+            s_LastSettings = settings;
             return settings;
         }
 
         private void SaveSettings()
         {
-            if (lastSettings != null)
-                File.WriteAllText(k_SettingsPath, JsonUtility.ToJson(lastSettings, true));
+            if (s_LastSettings == null)
+                return;
+
+            var fileInfo = new FileInfo(k_SettingsPath);
+            var settingsJson = JsonUtility.ToJson(s_LastSettings, true);
+            if (fileInfo.Exists && settingsJson == File.ReadAllText(k_SettingsPath))
+                return;
+
+            if (!AssetDatabase.IsOpenForEdit(k_SettingsPath) && !AssetDatabase.MakeEditable(k_SettingsPath))
+            {
+                Debug.LogWarning(s_FailedToSaveError);
+                return;
+            }
+
+            try
+            {
+                if (fileInfo.Exists && fileInfo.IsReadOnly)
+                    fileInfo.IsReadOnly = false;
+                File.WriteAllText(k_SettingsPath, settingsJson);
+            }
+            catch (Exception)
+            {
+                Debug.LogWarning(s_FailedToSaveError);
+            }
         }
 
         public override void OnDeactivate()

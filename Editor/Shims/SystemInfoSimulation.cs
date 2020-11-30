@@ -142,7 +142,6 @@ namespace Unity.DeviceSimulator
         public override bool supportsAsyncGPUReadback  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.supportsAsyncGPUReadback : base.supportsAsyncGPUReadback;
         public override bool supportsRayTracing  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.supportsRayTracing : base.supportsRayTracing;
         public override bool supportsSetConstantBuffer  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.supportsSetConstantBuffer : base.supportsSetConstantBuffer;
-        public override bool minConstantBufferOffsetAlignment  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.minConstantBufferOffsetAlignment : base.minConstantBufferOffsetAlignment;
         public override bool hasMipMaxLevel  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.hasMipMaxLevel : base.hasMipMaxLevel;
         public override bool supportsMipStreaming  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.supportsMipStreaming : base.supportsMipStreaming;
         public override bool usesLoadStoreActions  => m_GraphicsDeviceType != null && ShouldShim() ? m_GraphicsDeviceType.usesLoadStoreActions : base.usesLoadStoreActions;

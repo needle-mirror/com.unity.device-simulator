@@ -49,8 +49,6 @@ namespace Unity.DeviceSimulator
         private SimulatorControlPanel m_ControlPanel;
         private SimulatorPreviewPanel m_PreviewPanel;
 
-        public Action OnWindowFocus { get; set; }
-
         [MenuItem("Window/General/Device Simulator", false, 2000)]
         public static void ShowWindow()
         {
@@ -200,6 +198,7 @@ namespace Unity.DeviceSimulator
                 simulationStateChanged = true;
                 m_ScreenSimulation.Enable();
                 m_SystemInfoSimulation.Enable();
+                m_ApplicationSimulation.Enable();
                 DeviceSimulatorCallbacks.InvokeOnDeviceChange();
             }
             else if (m_State == SimulationState.Enabled && GetMainPlayModeView() != this)
@@ -208,6 +207,7 @@ namespace Unity.DeviceSimulator
                 simulationStateChanged = true;
                 m_ScreenSimulation.Disable();
                 m_SystemInfoSimulation.Disable();
+                m_ApplicationSimulation.Disable();
 
                 // Assumption here is that another Simulator instance will call OnDeviceChange event when it becomes MainPlayModeView
                 // so we don't need to call it here, but if it's not another Simulator window then we need to call the event.
@@ -221,8 +221,17 @@ namespace Unity.DeviceSimulator
 
         private void OnFocus()
         {
-            this.SetFocus(true);
-            OnWindowFocus?.Invoke();
+            SetFocus(true);
+
+            // Stealing shim back in case some other system started using it. One quirky situation where this happens is unmaximizing
+            // a simulator window, because for just a moment a new simulator window is created and steals shim, but the current window
+            // is not aware that it lost shim.
+            if (m_State == SimulationState.Enabled)
+            {
+                ShimManager.UseShim(m_ScreenSimulation);
+                ShimManager.UseShim(m_SystemInfoSimulation);
+                ShimManager.UseShim(m_ApplicationSimulation);
+            }
         }
 
         private void OnDisable()
@@ -274,13 +283,24 @@ namespace Unity.DeviceSimulator
             }
         }
 
-#if UNITY_2019_4_OR_NEWER
+#if UNITY_2020_1_OR_NEWER
         public void OnBeforeSerialize()
         {
             BeforeSerializeStates();
         }
 
         public void OnAfterDeserialize()
+        {
+            AfterDeserializeStates(m_SimulatorSerializationStates);
+        }
+
+#elif UNITY_2019_4
+        public new void OnBeforeSerialize()
+        {
+            BeforeSerializeStates();
+        }
+
+        public new void OnAfterDeserialize()
         {
             AfterDeserializeStates(m_SimulatorSerializationStates);
         }
