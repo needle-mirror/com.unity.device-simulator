@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
-    internal class ScreenSimulation : ScreenShimBase, ISimulatorEvents
+    internal class ScreenSimulation : ScreenShimBase
     {
         private DeviceInfo m_DeviceInfo;
         private ScreenData m_Screen;
-
-        private IInputProvider m_InputProvider;
 
         private bool m_AutoRotation;
         public bool AutoRotation => m_AutoRotation;
@@ -33,8 +31,38 @@ namespace Unity.DeviceSimulator
 
         private bool m_IsFullScreen;
         public Vector4 Insets { get; private set; }
+        public Vector4 InsetsInCurrentOrientation
+        {
+            get
+            {
+                switch (m_RenderedOrientation)
+                {
+                    case ScreenOrientation.Portrait:
+                        return Insets;
+                    case ScreenOrientation.PortraitUpsideDown:
+                        return new Vector4(Insets.z, Insets.w, Insets.x, Insets.y);
+                    case ScreenOrientation.LandscapeLeft:
+                        return new Vector4(Insets.y, Insets.z, Insets.w, Insets.x);
+                    case ScreenOrientation.LandscapeRight:
+                        return new Vector4(Insets.w, Insets.x, Insets.y, Insets.z);
+                    default:
+                        return Insets;
+                }
+            }
+        }
 
         public Rect ScreenSpaceSafeArea { get; private set; }
+
+        private ScreenOrientation m_DeviceOrientation;
+
+        public int DeviceRotation
+        {
+            set
+            {
+                m_DeviceOrientation = SimulatorUtilities.RotationToScreenOrientation(value);
+                ApplyAutoRotation();
+            }
+        }
 
         public bool IsRenderingLandscape => SimulatorUtilities.IsLandscape(m_RenderedOrientation);
 
@@ -45,13 +73,10 @@ namespace Unity.DeviceSimulator
         public event Action<Vector4> OnInsetsChanged;
         public event Action<Rect> OnScreenSpaceSafeAreaChanged;
 
-        public ScreenSimulation(DeviceInfo device, IInputProvider inputProvider, SimulationPlayerSettings playerSettings)
+        public ScreenSimulation(DeviceInfo device, SimulationPlayerSettings playerSettings)
         {
             m_DeviceInfo = device;
-            m_Screen = device.Screens[0];
-
-            m_InputProvider = inputProvider;
-            m_InputProvider.OnRotation += Rotate;
+            m_Screen = device.screens[0];
 
             m_SupportedOrientations = new Dictionary<ScreenOrientation, OrientationData>();
             foreach (var o in m_Screen.orientations)
@@ -73,11 +98,7 @@ namespace Unity.DeviceSimulator
             if (settingOrientation == ScreenOrientation.AutoRotation)
             {
                 m_AutoRotation = true;
-                var newOrientation = SimulatorUtilities.RotationToScreenOrientation(m_InputProvider.Rotation);
-                if (m_SupportedOrientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
-                    ForceNewOrientation(newOrientation);
-                else
-                    SetFirstAvailableAutoOrientation();
+                SetFirstAvailableAutoOrientation();
             }
             else if (m_SupportedOrientations.ContainsKey(settingOrientation))
             {
@@ -86,7 +107,7 @@ namespace Unity.DeviceSimulator
             }
             else
             {
-                // At least iPhone X responds to this absolute corner case by crashing, we will not do that.
+                // The real iPhone X responds to this absolute corner case by crashing, we will not do that.
                 m_AutoRotation = false;
                 ForceNewOrientation(m_SupportedOrientations.Keys.ToArray()[0]);
             }
@@ -113,14 +134,13 @@ namespace Unity.DeviceSimulator
             ShimManager.UseShim(this);
         }
 
-        private void Rotate(Quaternion rotation)
+        private void ApplyAutoRotation()
         {
             if (!m_AutoRotation) return;
 
-            var newOrientation = SimulatorUtilities.RotationToScreenOrientation(rotation);
-            if (newOrientation != m_RenderedOrientation && m_SupportedOrientations.ContainsKey(newOrientation) && m_AllowedAutoRotation[newOrientation])
+            if (m_DeviceOrientation != m_RenderedOrientation && m_SupportedOrientations.ContainsKey(m_DeviceOrientation) && m_AllowedAutoRotation[m_DeviceOrientation])
             {
-                ForceNewOrientation(newOrientation);
+                ForceNewOrientation(m_DeviceOrientation);
             }
             else
             {
@@ -141,13 +161,22 @@ namespace Unity.DeviceSimulator
             }
             m_RenderedOrientation = orientation;
             OnOrientationChanged?.Invoke(m_AutoRotation);
+
+            // We only change the resolution if we never set the resolution by calling Screen.SetResolution().
+            if (!m_IsFullScreen && !m_WasResolutionSet)
+            {
+                CalculateScreenResolutionForScreenMode(out int tempWidth, out int tempHeight);
+                SetResolution(tempWidth, tempHeight);
+            }
+
             CalculateInsets();
             CalculateSafeAreaAndCutouts();
         }
 
         private void CalculateSafeAreaAndCutouts()
         {
-            var safeArea = m_SupportedOrientations[m_RenderedOrientation].safeArea;
+            var orientationData = m_SupportedOrientations[m_RenderedOrientation];
+            var safeArea = orientationData.safeArea;
             Rect onScreenSafeArea = new Rect();
 
             // Calculating where on the screen to draw safe area
@@ -191,78 +220,67 @@ namespace Unity.DeviceSimulator
             ScreenSpaceSafeArea = onScreenSafeArea;
             OnScreenSpaceSafeAreaChanged?.Invoke(ScreenSpaceSafeArea);
 
-            int scaledHeight = 0;
-            var scaledNavigationBarHeight = Mathf.RoundToInt(m_DpiRatio * m_Screen.navigationBarHeight);
-            if (!m_WasResolutionSet)
-            {
-                scaledHeight = scaledNavigationBarHeight;
-                if (m_SupportedOrientations.ContainsKey(ScreenOrientation.Portrait))
-                    scaledHeight += Mathf.RoundToInt(m_DpiRatio * (m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height));
-            }
+            var screenWidthInOrientation = IsRenderingLandscape ? m_Screen.height : m_Screen.width;
+            var screenHeightInOrientation = IsRenderingLandscape ? m_Screen.width : m_Screen.height;
 
-            // Always consider the full screen mode width/height to scale the safe area & cutouts.
-            float xScale, yScale;
-            if (IsRenderingLandscape)
+            // The inverse of safe area, that is the size of borders excluded from the safe area.
+            // It is more convenient to scale these borders to correct resolution than to scale safe area rect.
+            var unsafeBorders = new Vector4()
             {
-                xScale = (float)(m_CurrentWidth + (m_IsFullScreen ? 0 : scaledHeight)) / m_Screen.height;
-                yScale = (float)m_CurrentHeight / m_Screen.width;
-            }
-            else
-            {
-                xScale = (float)m_CurrentWidth / m_Screen.width;
-                yScale = (float)(m_CurrentHeight + (m_IsFullScreen ? 0 : scaledHeight)) / m_Screen.height;
-            }
+                x = safeArea.x,
+                y = screenHeightInOrientation - safeArea.height - safeArea.y,
+                z = screenWidthInOrientation - safeArea.width - safeArea.x,
+                w = safeArea.y
+            };
 
-            // Scale safe area.
-            var odd = m_SupportedOrientations[m_RenderedOrientation];
-            var sa = odd.safeArea;
-            if (m_IsFullScreen)
-            {
-                m_CurrentSafeArea = new Rect(Mathf.Round(sa.x * xScale), Mathf.Round(sa.y * yScale), Mathf.Round(sa.width * xScale), Mathf.Round(sa.height * yScale));
-            }
-            else
-            {
-                if (m_WasResolutionSet)
-                    m_CurrentSafeArea = new Rect(0, 0, m_CurrentWidth, m_CurrentHeight); // Set the safe area to current resolution in windowed mode with resolution set.
-                else
-                    m_CurrentSafeArea = new Rect(0, 0, Mathf.Round(sa.width * xScale), Mathf.Round(sa.height * yScale));
-            }
+            // Need to exclude unsafe area hidden by insets. It is obscured by the inset and therefore disappears.
+            var insetsInOrientation = InsetsInCurrentOrientation;
+            unsafeBorders -= insetsInOrientation;
 
-            // Consider the navigation bar height if it's windowed mode without resolution set.
-            if (!m_IsFullScreen && !m_WasResolutionSet)
-            {
-                switch (m_RenderedOrientation)
-                {
-                    case ScreenOrientation.Portrait:
-                    case ScreenOrientation.PortraitUpsideDown:
-                        m_CurrentSafeArea.height -= scaledNavigationBarHeight;
-                        break;
-                    case ScreenOrientation.LandscapeLeft:
-                    case ScreenOrientation.LandscapeRight:
-                        m_CurrentSafeArea.width -= scaledNavigationBarHeight;
-                        break;
-                }
-            }
+            // A negative unsafe border can happen because inset encroaches on the safe area. In other words, unsafe border is smaller than the inset.
+            // In these cases the safe area will border the inset directly on that side of the screen, so unsafe border is clamped to 0.
+            unsafeBorders.x = Mathf.Clamp(unsafeBorders.x, 0, float.MaxValue);
+            unsafeBorders.y = Mathf.Clamp(unsafeBorders.y, 0, float.MaxValue);
+            unsafeBorders.z = Mathf.Clamp(unsafeBorders.z, 0, float.MaxValue);
+            unsafeBorders.w = Mathf.Clamp(unsafeBorders.w, 0, float.MaxValue);
 
-            // For windowed mode, let's return empty cutouts for now.
-            if (!m_IsFullScreen)
+            // This is the resolution of the part of the screen where game rendering is occuring, it might be different than the actual rendering resolution.
+            var renderAreaWidth = screenWidthInOrientation - insetsInOrientation.x - insetsInOrientation.z;
+            var renderAreaHeight = screenHeightInOrientation - insetsInOrientation.y - insetsInOrientation.w;
+
+            var resolutionWidthScale = m_CurrentWidth / renderAreaWidth;
+            var resolutionHeightScale = m_CurrentHeight / renderAreaHeight;
+
+            unsafeBorders.x *= resolutionWidthScale;
+            unsafeBorders.y *= resolutionHeightScale;
+            unsafeBorders.z *= resolutionWidthScale;
+            unsafeBorders.w *= resolutionHeightScale;
+
+            m_CurrentSafeArea = new Rect(Mathf.Round(unsafeBorders.x), Mathf.Round(unsafeBorders.w), Mathf.Round(m_CurrentWidth - unsafeBorders.x - unsafeBorders.z), Mathf.Round(m_CurrentHeight - unsafeBorders.y - unsafeBorders.w));
+
+            if (orientationData.cutouts == null || orientationData.cutouts.Length == 0)
             {
                 m_CurrentCutouts = new Rect[0];
-                return;
-            }
-
-            // Scale cutouts.
-            if (odd.cutouts?.Length > 0)
-            {
-                m_CurrentCutouts = new Rect[odd.cutouts.Length];
-                for (int i = 0; i < odd.cutouts.Length; ++i)
-                {
-                    var cutout = odd.cutouts[i];
-                    m_CurrentCutouts[i] = new Rect(Mathf.Round(cutout.x * xScale), Mathf.Round(cutout.y * yScale), Mathf.Round(cutout.width * xScale), Mathf.Round(cutout.height * yScale));
-                }
             }
             else
-                m_CurrentCutouts = new Rect[0];
+            {
+                // Calculating the cutouts and adding the ones that are inside the rendering area.
+                List<Rect> currentCutouts = new List<Rect>();
+
+                for (int i = 0; i < orientationData.cutouts.Length; ++i)
+                {
+                    var cutout = orientationData.cutouts[i];
+                    var currentCutout = new Rect(Mathf.Round((cutout.x - insetsInOrientation.x) * resolutionWidthScale), Mathf.Round((cutout.y - insetsInOrientation.w) * resolutionHeightScale), Mathf.Round(cutout.width * resolutionWidthScale), Mathf.Round(cutout.height * resolutionHeightScale));
+
+                    // Negative coordinates can happen if the cutout overlaps the inset. In other words, if the cutout is outside the rendering area.
+                    if (currentCutout.x >= 0 && currentCutout.y >= 0 && currentCutout.xMax <= m_CurrentWidth && currentCutout.yMax <= m_CurrentHeight)
+                    {
+                        currentCutouts.Add(currentCutout);
+                    }
+                }
+
+                m_CurrentCutouts = currentCutouts.ToArray();
+            }
         }
 
         // Insets are parts of the screen that are outside of unity rendering area, like navigation bar in windowed mode. Insets are only possible on Android at the moment.
@@ -279,7 +297,7 @@ namespace Unity.DeviceSimulator
                     case ScreenOrientation.Portrait:
                     case ScreenOrientation.LandscapeLeft:
                     case ScreenOrientation.LandscapeRight:
-                        inset = new Vector4(0, m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height, 0, m_Screen.navigationBarHeight);
+                        inset = new Vector4(0, 0, 0, m_Screen.navigationBarHeight);
                         break;
                     case ScreenOrientation.PortraitUpsideDown:
                         var topInset = m_Screen.height - m_SupportedOrientations[ScreenOrientation.Portrait].safeArea.height + m_Screen.navigationBarHeight;
@@ -308,7 +326,7 @@ namespace Unity.DeviceSimulator
             }
             else if (value)
             {
-                Rotate(m_InputProvider.Rotation);
+                ApplyAutoRotation();
             }
 
             OnAllowedOrientationChanged?.Invoke();
@@ -343,23 +361,37 @@ namespace Unity.DeviceSimulator
 
         private void CalculateScreenResolutionForScreenMode(out int width, out int height)
         {
-            width = m_CurrentWidth;
-            height = m_CurrentHeight;
+            int heightInPortraitOrientation;
 
-
-            var portraitSafeArea = m_SupportedOrientations[ScreenOrientation.Portrait].safeArea;
-            var noFullScreenHeight = portraitSafeArea.height + portraitSafeArea.y - m_Screen.navigationBarHeight;
-            var scale = m_IsFullScreen ? m_Screen.height / noFullScreenHeight : noFullScreenHeight / m_Screen.height;
-            switch (m_RenderedOrientation)
+            if (m_IsFullScreen)
             {
-                case ScreenOrientation.Portrait:
-                case ScreenOrientation.PortraitUpsideDown:
-                    height = Convert.ToInt32(Math.Round(height * scale));
-                    break;
-                case ScreenOrientation.LandscapeLeft:
-                case ScreenOrientation.LandscapeRight:
-                    width = Convert.ToInt32(Math.Round(width * scale));
-                    break;
+                heightInPortraitOrientation = m_Screen.height;
+            }
+            else
+            {
+                if (m_RenderedOrientation == ScreenOrientation.PortraitUpsideDown)
+                {
+                    var safeArea = m_SupportedOrientations[ScreenOrientation.PortraitUpsideDown].safeArea;
+                    heightInPortraitOrientation = (int)(safeArea.height - m_Screen.navigationBarHeight);
+                }
+                else
+                {
+                    heightInPortraitOrientation = m_Screen.height - m_Screen.navigationBarHeight;
+                }
+            }
+
+            var scaledWidthInPortraitOrientation = Mathf.RoundToInt(m_Screen.width * m_DpiRatio);
+            var scaledHeightInPortraitOrientation = Mathf.RoundToInt(heightInPortraitOrientation * m_DpiRatio);
+
+            if (IsRenderingLandscape)
+            {
+                width = scaledHeightInPortraitOrientation;
+                height = scaledWidthInPortraitOrientation;
+            }
+            else
+            {
+                width = scaledWidthInPortraitOrientation;
+                height = scaledHeightInPortraitOrientation;
             }
         }
 
@@ -375,7 +407,6 @@ namespace Unity.DeviceSimulator
 
         public new void Dispose()
         {
-            m_InputProvider.OnRotation -= Rotate;
             Disable();
         }
 
@@ -398,7 +429,7 @@ namespace Unity.DeviceSimulator
                 if (value == ScreenOrientation.AutoRotation)
                 {
                     m_AutoRotation = true;
-                    Rotate(m_InputProvider.Rotation);
+                    ApplyAutoRotation();
                 }
                 else if (m_SupportedOrientations.ContainsKey(value))
                 {

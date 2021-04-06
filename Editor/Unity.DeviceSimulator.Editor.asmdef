@@ -1,7 +1,7 @@
 {
     "name": "Unity.DeviceSimulator.Editor",
+    "rootNamespace": "",
     "references": [
-        "GUID:762596d9ab04c42c89319920e8e541cd",
         "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
     "includePlatforms": [

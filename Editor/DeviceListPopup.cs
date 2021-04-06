@@ -1,25 +1,37 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using UnityEditor;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
     internal class DeviceListPopup : PopupWindowContent
     {
+        private struct IndexedDevice
+        {
+            public IndexedDevice(int index, DeviceInfo device)
+            {
+                Index = index;
+                Device = device;
+            }
+
+            public int Index;
+            public DeviceInfo Device;
+        }
+
         private const int k_ItemHeight = 17;
         private const int k_SpaceWidth = 15;
         private const int k_SpaceHeight = 2;
 
-        private readonly List<DeviceInfo> m_DeviceList;
+        private readonly DeviceInfoAsset[] m_DeviceList;
         private int m_SelectedDeviceIndex;
         private int m_HoverDeviceIndex = -1;
 
         private int m_MaximumVisibleDeviceCount; // Not including the search field.
 
-        private List<(int, DeviceInfo)> m_FilteredDevices;
+        private List<IndexedDevice> m_FilteredDevices;
         private int m_SelectedDeviceIndexInFilteredList;
 
         private Texture2D m_CheckedTexture;
@@ -33,7 +45,7 @@ namespace Unity.DeviceSimulator
 
         public Action<string> OnSearchInput { get; set; }
 
-        public DeviceListPopup(List<DeviceInfo> deviceList, int selectedDeviceIndex, int maximumVisibleDeviceCount, string lastSearchContent)
+        public DeviceListPopup(DeviceInfoAsset[] deviceList, int selectedDeviceIndex, int maximumVisibleDeviceCount, string lastSearchContent)
         {
             m_DeviceList = deviceList;
             m_SelectedDeviceIndex = selectedDeviceIndex;
@@ -53,23 +65,23 @@ namespace Unity.DeviceSimulator
             m_SelectedDeviceIndexInFilteredList = -1;
             if (string.IsNullOrEmpty(m_SearchContent))
             {
-                m_FilteredDevices = m_DeviceList.Select((deviceInfo, index) => (index, deviceInfo)).ToList();
+                m_FilteredDevices = m_DeviceList.Select((device, index) => new IndexedDevice(index, device.deviceInfo)).ToList();
                 m_SelectedDeviceIndexInFilteredList = m_SelectedDeviceIndex;
                 return;
             }
 
-            m_FilteredDevices = new List<(int, DeviceInfo)>();
+            m_FilteredDevices = new List<IndexedDevice>();
 
             var lowercaseSearchContent = m_SearchContent.ToLower();
-            for (int index = 0; index < m_DeviceList.Count; ++index)
+            for (int index = 0; index < m_DeviceList.Length; ++index)
             {
-                if (!m_DeviceList[index].friendlyName.ToLower().Contains(lowercaseSearchContent))
+                if (!m_DeviceList[index].deviceInfo.friendlyName.ToLower().Contains(lowercaseSearchContent))
                     continue;
 
                 if (index == m_SelectedDeviceIndex)
                     m_SelectedDeviceIndexInFilteredList = m_FilteredDevices.Count;
 
-                m_FilteredDevices.Add((index, m_DeviceList[index]));
+                m_FilteredDevices.Add(new IndexedDevice(index, m_DeviceList[index].deviceInfo));
             }
         }
 
@@ -150,7 +162,7 @@ namespace Unity.DeviceSimulator
                 var deviceNameRect = new Rect(prefixRect.x + prefixRect.width, prefixRect.y, totalRect.width - k_SpaceWidth, k_ItemHeight);
                 if (currentEvent.type == EventType.Repaint)
                 {
-                    if (m_HoverDeviceIndex == device.Item1)
+                    if (m_HoverDeviceIndex == device.Index)
                     {
                         if (deviceNameRect.Contains(currentEvent.mousePosition))
                         {
@@ -165,7 +177,7 @@ namespace Unity.DeviceSimulator
                         }
                     }
 
-                    if (device.Item1 == m_SelectedDeviceIndex)
+                    if (device.Index == m_SelectedDeviceIndex)
                     {
                         GUI.Label(prefixRect, m_CheckedTexture);
                     }
@@ -173,11 +185,11 @@ namespace Unity.DeviceSimulator
                     {
                         GUI.Label(prefixRect, "");
                     }
-                    GUI.Label(deviceNameRect, device.Item2.friendlyName);
+                    GUI.Label(deviceNameRect, device.Device.friendlyName);
                 }
                 else
                 {
-                    DoMouseEvent(deviceNameRect, device.Item1);
+                    DoMouseEvent(deviceNameRect, device.Index);
                 }
 
                 startHeight += (k_ItemHeight + k_SpaceHeight);

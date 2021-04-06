@@ -6,7 +6,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
     internal class DeviceSimulatorProjectSettingsProvider : SettingsProvider
     {
@@ -28,9 +28,16 @@ namespace Unity.DeviceSimulator
 
             provider.activateHandler = (searchContext, rootElement) =>
             {
-                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/SimulatorResources/UXML/ui_project_settings.uxml");
+                var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("packages/com.unity.device-simulator/Editor/SimulatorResources/UXML/ui_project_settings.uxml");
                 visualTree.CloneTree(rootElement);
                 rootElement.Bind(provider.SerializedSettings);
+
+                rootElement.Q<Toggle>("system-info-toggle").RegisterCallback<ChangeEvent<bool>>(evt => SimulatorWindow.RestartAllSimulators());
+                rootElement.Q<Toggle>("application-toggle").RegisterCallback<ChangeEvent<bool>>(evt => SimulatorWindow.RestartAllSimulators());
+                rootElement.Q<Toggle>("default-assembly-toggle").RegisterCallback<ChangeEvent<bool>>(evt => SimulatorWindow.RestartAllSimulators());
+                var assemblyList = rootElement.Q<ListView>("assembly-list");
+                assemblyList.RegisterCallback<ChangeEvent<int>>(evt => SimulatorWindow.RestartAllSimulators());
+                assemblyList.RegisterCallback<ChangeEvent<string>>(evt => SimulatorWindow.RestartAllSimulators());
             };
 
             return provider;

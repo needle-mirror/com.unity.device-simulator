@@ -1,73 +1,59 @@
-# Introduction
+# Device Simulator
 
-Device Simulator is an alternative to the traditional Unity editor Game window. By simulating Screen and SystemInfo class behavior, Device Simulator aims to give an accurate picture of how an app will look on a device.
+![images/DeviceSimulatorView.png](images/DeviceSimulatorView.png)
 
-### Requirements
-- Compatible with Unity 2019.3 or above.
+The **Device Simulator** is a Unity Editor feature that simulates how certain aspects of your application will appear and behave on a mobile device.
 
-### Supported Features
-- [Screen](https://docs.unity3d.com/ScriptReference/Screen.html) class simulation.
-- [SystemInfo](https://docs.unity3d.com/ScriptReference/SystemInfo.html) class simulation.
-- [Application](https://docs.unity3d.com/ScriptReference/Application.html) class simulation.
-- Screen shape preview, with notch and rounded corners.
+The Device Simulator consists of:
 
-### Installing Device Simulator Package
-To install Device Simulator package, follow the instructions in the [Package Manager documentation](https://docs.unity3d.com/Packages/com.unity.package-manager-ui@latest/index.html).
+* The Device Simulator view, which lets you view your application on a simulated mobile device
+* Simulated classes, which let you test code that responds to device-specific behaviors
+* Device definitions, which describe the device to simulate
+* Device Simulator plugins, which configure the UI of the Device Simulator view
 
-You can access Device Simulator window in Unity Editor via
-- Menu: `Window -> General -> Device Simulator`
-- Menu: `Simulator` menu in Game view toolbar to switch to Device Simulator view.
+# Device Simulator capabilities
 
-## Using Device Simulator
+## Controls in the Device Simulator view
 
-![Device Simulator window](images/WindowParts.png)
+The Device Simulator view simulates many common features of mobile devices, including:
 
-#### 1. Game view mode
-Switch between Game view and Simulator view.
+* Auto-rotation
+* Screen safe area
+* Touch input
 
-#### 2. Device selection
-Select from the available devices.
+## Player Settings
 
-#### 3. Reload
-Initialise simulation of Screen and SystemInfo classes using Player Settings without causing a domain reload.
+Device Simulator reacts to some Player settings in the same way that a real device would. Supported Player settings are:
 
-#### 4. Scale
-Controls how big the device appears inside the simulator window.
+* FullScreen mode
+* Resolution Scaling
+* Default Orientation
+* Graphics API
 
-#### 5. Fit to Screen
-Automatically scale device to fit snugly inside the window.
+## Simulated touch input
 
-#### 6. Rotate
-Physically rotate the device. Depending on whether auto rotation is enabled or disabled, the actual picture may or may not rotate together with the device.
+Clicking on the simulated device screen with the mouse cursor will create touch events in the old Input Manager or the new Input System or both, depending on which one is active. Input is simulated only when the Editor is in play mode.
 
-![Highlight Safe Area](images/DeviceRotation.gif)
+**Note:** Device Simulator does not support multitouch, only one finger touch is simulated.
 
-#### 7. Highlight Safe Area
-Draw a border around the current [Screen.safeArea](https://docs.unity3d.com/ScriptReference/Screen-safeArea.html)
+## Limitations
 
-![Highlight Safe Area](images/HighlightSafeArea.gif)
+The Device Simulator is intended primarily for viewing the layout of your application, and testing basic interactions. It does not provide an accurate representation of how your application will run on a device.
 
-#### 8. Device Specifications
-Shows the most important data of the currently simulated device:
-- Device OS
-- Device CPU/GPU
-- Device Resolution
+The Device Simulator view does not simulate the following:
 
-#### 9. Screen Settings
-Allow viewing and changing the values of the Screen class.
+* The performance characteristics of a device, such as processor speed, or available RAM.
+* The rendering capabilities of a device.
+* Native plugins that do not work in the Editor.
+* Platform #define directives for the simulated device, like UNITY_IOS.
+* Gyroscope rotation.
 
-#### 10. Application Settings
-Allow setting custom values that will be returned by the Application class.
+Additionally, not all APIs of the simulated classes are simulated.
 
-## Preferences
-You can access Device Simulator preferences by menu `Preferences -> Device Simulator`, where you can:
-- Set the custom device directory.
-- Set color and width of the safe area highlight line.\
-  Please reopen the Device Simulator window after setting the customised device directory.
-
-## Document revision history
+# Document revision history
 |Date|Reason|
 |---|---|
+|Apr 12, 2021|Matches package version 3.0.0-preview|
 |Dec 2, 2019|Matches package version 2.0.0-preview|
 |Nov 15, 2019|Matches package version 1.3.0-preview|
 |Oct 11, 2019|Matches package version 1.2.0-preview|

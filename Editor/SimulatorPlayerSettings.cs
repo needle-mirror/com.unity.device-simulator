@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine.Rendering;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
     /// <summary>
     /// This class contains a subset of player settings that we need to initialize ScreenSimulation.

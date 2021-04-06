@@ -3,6 +3,24 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.0.0-preview] - 2021-04-06
+
+### Added
+- Added DeviceSimulatorPlugin class - a new way to extend the Device Simulator.
+- Added new devices.
+
+### Changed
+- Redesigned how custom devices are added to the Device Simulator.
+
+### Removed
+- Preferences for Device Simulator were removed due to changes in how custom devices are loaded.
+- Device Specifications panel removed fromm the Control Panel.
+- Screen Settings panel removed from the Control Panel.
+
+### Fixed
+- Case 1295407 The input is detected when clicking on notch.
+- Case 1217736 Fix resolution, safe area, and cutouts when simulating Android devices in windowed mode.
+
 ## [2.2.4-preview] - 2020-11-30
 
 ### Fixed

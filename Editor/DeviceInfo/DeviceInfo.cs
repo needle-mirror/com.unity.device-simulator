@@ -3,7 +3,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
     [Serializable]
     internal class DeviceInfo
@@ -11,16 +11,13 @@ namespace Unity.DeviceSimulator
         public string friendlyName;
         public int version;
 
-        public ScreenData[] Screens;
-        public SystemInfoData SystemInfo;
+        public ScreenData[] screens;
+        public SystemInfoData systemInfo;
 
         public override string ToString()
         {
             return friendlyName;
         }
-
-        [NonSerialized]
-        public string Directory;
 
         public bool IsAndroidDevice()
         {
@@ -32,67 +29,19 @@ namespace Unity.DeviceSimulator
             return IsGivenDevice("ios");
         }
 
-        public bool IsMobileDevice()
+        internal bool IsMobileDevice()
         {
             return IsAndroidDevice() || IsiOSDevice();
         }
 
-        public bool IsConsoleDevice()
+        internal bool IsConsoleDevice()
         {
             return false; // Return false for now, should revisit when adding console devices.
         }
 
-        public bool IsGivenDevice(string os)
+        private bool IsGivenDevice(string os)
         {
-            return (this.SystemInfo != null) ? this.SystemInfo.operatingSystem.ToLower().Contains(os) : false;
-        }
-
-        public bool LoadOverlayImage()
-        {
-            var screen = this.Screens[0];
-            if (screen.presentation.overlay != null)
-                return true;
-
-            if (string.IsNullOrEmpty(screen.presentation.overlayPath))
-                return false;
-
-            var filePath = Path.Combine(this.Directory, screen.presentation.overlayPath);
-            if (!File.Exists(filePath))
-                return false;
-
-            var overlayBytes = File.ReadAllBytes(filePath);
-            var texture = new Texture2D(2, 2, TextureFormat.Alpha8, false)
-            {
-                alphaIsTransparency = true
-            };
-
-            if (!texture.LoadImage(overlayBytes, false))
-                return false;
-
-            screen.presentation.overlay = texture;
-            return true;
-        }
-
-        public void AddOptionalFields()
-        {
-            foreach (var screen in Screens)
-            {
-                if (screen.orientations == null || screen.orientations.Length == 0)
-                {
-                    screen.orientations = new[]
-                    {
-                        new OrientationData {orientation = ScreenOrientation.Portrait},
-                        new OrientationData {orientation = ScreenOrientation.PortraitUpsideDown},
-                        new OrientationData {orientation = ScreenOrientation.LandscapeLeft},
-                        new OrientationData {orientation = ScreenOrientation.LandscapeRight}
-                    };
-                }
-                foreach (var orientation in screen.orientations)
-                {
-                    if (orientation.safeArea == Rect.zero)
-                        orientation.safeArea = SimulatorUtilities.IsLandscape(orientation.orientation) ? new Rect(0, 0, screen.height, screen.width) : new Rect(0, 0, screen.width, screen.height);
-                }
-            }
+            return systemInfo?.operatingSystem.ToLower().Contains(os) ?? false;
         }
     }
 
@@ -102,7 +51,6 @@ namespace Unity.DeviceSimulator
         public string overlayPath;
         public Vector4 borderSize;
         public float cornerRadius;
-        [NonSerialized] public Texture overlay;
     }
 
     [Serializable]
@@ -140,7 +88,6 @@ namespace Unity.DeviceSimulator
         public bool supportsLocationService;
         public bool supportsVibration;
         public int systemMemorySize;
-        public string unsupportedIdentifier;
         public GraphicsSystemInfoData[] graphicsDependentData;
     }
 
@@ -200,7 +147,6 @@ namespace Unity.DeviceSimulator
         public bool supportsAsyncGPUReadback;
         public bool supportsRayTracing;
         public bool supportsSetConstantBuffer;
-        public bool minConstantBufferOffsetAlignment;
         public bool hasMipMaxLevel;
         public bool supportsMipStreaming;
         public bool usesLoadStoreActions;

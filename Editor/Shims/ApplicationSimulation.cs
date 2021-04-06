@@ -1,26 +1,26 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
-    internal class ApplicationSimulation : ApplicationShimBase, ISimulatorEvents
+    internal class ApplicationSimulation : UnityEngine.ApplicationShimBase
     {
-        private readonly DeviceInfo m_DeviceInfo;
-        private readonly List<string> m_ShimmedAssemblies;
+        public SystemLanguage simulatedSystemLanguage { get; set; }
+        public NetworkReachability simulatedInternetReachability { get; set; }
 
-        public SystemLanguage ShimmedSystemLanguage { get; set; }
+        private DeviceInfo m_DeviceInfo;
+        private List<string> m_ShimmedAssemblies;
 
-        public NetworkReachability ShimmedInternetReachability { get; set; }
+        public ApplicationSimulation(SimulatorState serializedState)
+        {
+            simulatedSystemLanguage = serializedState.systemLanguage;
+            simulatedInternetReachability = serializedState.networkReachability;
+        }
 
-        public ApplicationSimulation(DeviceInfo deviceInfo, List<string> shimmedAssemblies)
+        public void OnSimulationStart(DeviceInfo deviceInfo, List<string> shimmedAssemblies)
         {
             m_DeviceInfo = deviceInfo;
             m_ShimmedAssemblies = shimmedAssemblies;
-
-            ShimmedSystemLanguage = SystemLanguage.English;
-            ShimmedInternetReachability = NetworkReachability.ReachableViaLocalAreaNetwork;
-
-            Enable();
         }
 
         public void Enable()
@@ -43,35 +43,22 @@ namespace Unity.DeviceSimulator
             return SimulatorUtilities.ShouldShim(m_ShimmedAssemblies);
         }
 
-        #region ApplicationShimBase Overrides
-
-        public override bool isEditor => ShouldShim() ? false : base.isEditor;
-
-        public override RuntimePlatform platform
+        public void StoreSerializationStates(ref SimulatorState states)
         {
-            get
-            {
-                if (m_DeviceInfo != null && ShouldShim())
-                {
-                    if (m_DeviceInfo.IsAndroidDevice())
-                        return RuntimePlatform.Android;
-
-                    if (m_DeviceInfo.IsiOSDevice())
-                        return RuntimePlatform.IPhonePlayer;
-                }
-
-                return base.platform;
-            }
+            states.systemLanguage = simulatedSystemLanguage;
+            states.networkReachability = simulatedInternetReachability;
         }
 
-        public override bool isMobilePlatform => ShouldShim() ? m_DeviceInfo.IsMobileDevice() : base.isMobilePlatform;
+        public override bool isEditor => false;
+        public override RuntimePlatform platform => ShouldShim() ? (m_DeviceInfo.IsiOSDevice() ? RuntimePlatform.IPhonePlayer : RuntimePlatform.Android) : base.platform;
+        public override bool isMobilePlatform => ShouldShim() ?  m_DeviceInfo.IsMobileDevice() : base.isMobilePlatform;
+        public override bool isConsolePlatform => ShouldShim() ?  m_DeviceInfo.IsConsoleDevice() : base.isConsolePlatform;
+        public override SystemLanguage systemLanguage => ShouldShim() ?  simulatedSystemLanguage : base.systemLanguage;
+        public override NetworkReachability internetReachability => ShouldShim() ?  simulatedInternetReachability : base.internetReachability;
 
-        public override bool isConsolePlatform => ShouldShim() ? m_DeviceInfo.IsConsoleDevice() : base.isConsolePlatform;
-
-        public override SystemLanguage systemLanguage => ShouldShim() ? ShimmedSystemLanguage : base.systemLanguage;
-
-        public override NetworkReachability internetReachability => ShouldShim() ? ShimmedInternetReachability : base.internetReachability;
-
-        #endregion
+        public void InvokeLowMemory()
+        {
+            OnLowMemory();
+        }
     }
 }

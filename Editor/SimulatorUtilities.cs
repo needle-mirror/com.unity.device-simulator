@@ -1,20 +1,10 @@
 using System;
+using UnityEngine;
 using System.Collections.Generic;
 using System.Diagnostics;
-using UnityEditor;
-using UnityEngine;
-using UnityEngine.Assertions;
 
-namespace Unity.DeviceSimulator
+namespace UnityEditor.DeviceSimulation
 {
-    internal enum RenderedScreenOrientation
-    {
-        Portrait = 1,
-        PortraitUpsideDown = 2,
-        LandscapeLeft = 3,
-        LandscapeRight = 4,
-    }
-
     internal enum ResolutionScalingMode
     {
         Disabled = 0,
@@ -22,34 +12,6 @@ namespace Unity.DeviceSimulator
     }
 
     internal enum SimulationState{ Enabled, Disabled }
-
-    [Serializable]
-    internal class SimulatorSerializationStates
-    {
-        public bool controlPanelHidden = false;
-        public float controlPanelWidth = 300f;
-
-        public Dictionary<string, bool> controlPanelFoldouts = new Dictionary<string, bool>();
-        public List<string> controlPanelFoldoutKeys = new List<string>();
-        public List<bool> controlPanelFoldoutValues = new List<bool>();
-
-        public Dictionary<string, string> extensions = new Dictionary<string, string>();
-        public List<string> extensionNames = new List<string>();
-        public List<string> extensionStates = new List<string>();
-
-        public int scale = 20;
-        public bool fitToScreenEnabled = true;
-
-        public int rotationDegree = 0;
-        [NonSerialized]
-        public Quaternion rotation = Quaternion.identity;
-
-        public bool highlightSafeAreaEnabled = false;
-        public string friendlyName = string.Empty;
-
-        public NetworkReachability networkReachability = NetworkReachability.NotReachable;
-        public SystemLanguage systemLanguage = SystemLanguage.English;
-    }
 
     internal static class SimulatorUtilities
     {
@@ -71,12 +33,7 @@ namespace Unity.DeviceSimulator
             throw new ArgumentException($"Unexpected value of UIOrientation {original}");
         }
 
-        public static ScreenOrientation RotationToScreenOrientation(Quaternion rotation)
-        {
-            return RotationToScreenOrientation(rotation.eulerAngles.z);
-        }
-
-        public static ScreenOrientation RotationToScreenOrientation(float angle)
+        public static ScreenOrientation RotationToScreenOrientation(int angle)
         {
             ScreenOrientation orientation = ScreenOrientation.Portrait;
             if (angle > 315 || angle <= 45)
