@@ -3,6 +3,11 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.0.2-preview] - 2021-09-08
+
+### Fixed
+- Case 1355553 All assets are reimported when installing Device Simulator package for the first time.
+
 ## [3.0.1-preview] - 2021-06-08
 
 ### Fixed
