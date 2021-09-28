@@ -3,6 +3,11 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.0.3-preview] - 2021-09-28
+
+### Fixed
+- Case 1333953 IMGUI button presses don't get registered while in a Device Simulator.
+
 ## [3.0.2-preview] - 2021-09-08
 
 ### Fixed
