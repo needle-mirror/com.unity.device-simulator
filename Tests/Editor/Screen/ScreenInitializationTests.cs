@@ -86,13 +86,14 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations, screenWidth, screenHeight, default, screenDpi);
             m_Simulation = new ScreenSimulation(testDevice, new SimulationPlayerSettings());
+            m_Simulation.ApplyChanges();
 
             if (screenDpi >= scaledDpi)
             {
                 var scale = scaledDpi / screenDpi;
                 var expectedResolution = orientation.IsLandscape()
-                    ? new Vector2((int)(screenHeight * scale), (int)(screenWidth * scale))
-                    : new Vector2((int)(screenWidth * scale), (int)(screenHeight * scale));
+                    ? new Vector2(Mathf.RoundToInt(screenHeight * scale), Mathf.RoundToInt(screenWidth * scale))
+                    : new Vector2(Mathf.RoundToInt(screenWidth * scale), Mathf.RoundToInt(screenHeight * scale));
 
                 Assert.AreEqual(expectedResolution, new Vector2(Screen.currentResolution.width, Screen.currentResolution.height));
             }
@@ -121,6 +122,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
             m_Simulation = new ScreenSimulation(m_TestDevice, new SimulationPlayerSettings());
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[orientation];
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(orientation, Screen.orientation);
         }
 
@@ -134,6 +136,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             PlayerSettings.defaultInterfaceOrientation = ScreenTestUtilities.ScreenOrientationToUI[orientation];
             m_Simulation = new ScreenSimulation(m_TestDevice, new SimulationPlayerSettings());
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[orientation];
+            m_Simulation.ApplyChanges();
 
             Assert.AreEqual(orientation, Screen.orientation);
         }

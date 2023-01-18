@@ -38,6 +38,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
         {
             m_Simulation = new ScreenSimulation(m_TestDevice, new SimulationPlayerSettings());
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[ScreenOrientation.PortraitUpsideDown];
+            m_Simulation.ApplyChanges();
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;
@@ -46,6 +47,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             Screen.autorotateToLandscapeRight = true;
 
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[orientation];
+            m_Simulation.ApplyChanges();
 
             Assert.AreEqual(orientation, Screen.orientation);
         }
@@ -67,9 +69,11 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             Screen.autorotateToLandscapeRight = true;
 
             ScreenTestUtilities.SetScreenAutoOrientation(orientation, false);
+            m_Simulation.ApplyChanges();
 
             Assert.AreNotEqual(orientation, Screen.orientation);
             ScreenTestUtilities.SetScreenAutoOrientation(orientation, true);
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(orientation, Screen.orientation);
         }
 
@@ -82,6 +86,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
         {
             m_Simulation = new ScreenSimulation(m_TestDevice, new SimulationPlayerSettings());
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[orientation];
+            m_Simulation.ApplyChanges();
 
             Screen.orientation = ScreenOrientation.AutoRotation;
             Screen.autorotateToPortrait = true;
@@ -91,6 +96,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
             Assert.AreEqual(orientation, Screen.orientation);
             ScreenTestUtilities.SetScreenAutoOrientation(orientation, false);
+            m_Simulation.ApplyChanges();
             Assert.AreNotEqual(orientation, Screen.orientation);
         }
 
@@ -104,6 +110,8 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             m_Simulation = new ScreenSimulation(m_TestDevice, new SimulationPlayerSettings());
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[ScreenOrientation.PortraitUpsideDown];
             Screen.orientation = orientation;
+            m_Simulation.ApplyChanges();
+
             Assert.AreEqual(orientation, Screen.orientation);
         }
 
@@ -123,15 +131,18 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             foreach (var orientation in enabledOrientations)
             {
                 ScreenTestUtilities.SetScreenAutoOrientation(orientation, true);
+                m_Simulation.ApplyChanges();
             }
             ScreenTestUtilities.SetScreenAutoOrientation(disabledOrientation, false);
 
             foreach (var orientation in enabledOrientations)
             {
                 m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[orientation];
+                m_Simulation.ApplyChanges();
                 Assert.AreEqual(orientation, Screen.orientation);
             }
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[disabledOrientation];
+            m_Simulation.ApplyChanges();
             Assert.AreNotEqual(disabledOrientation, Screen.orientation);
         }
     }

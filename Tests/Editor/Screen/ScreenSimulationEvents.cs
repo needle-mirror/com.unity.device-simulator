@@ -35,48 +35,39 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
         {
             m_Simulation = new ScreenSimulation(m_TestDevice, new SimulationPlayerSettings());
 
-            var autoRotate = false;
             void Reset()
             {
                 m_EventCounter = 0;
-                autoRotate = false;
             }
 
-            m_Simulation.OnOrientationChanged += auto =>
+            m_Simulation.OnOrientationChanged += () =>
             {
                 m_EventCounter++;
-                autoRotate = auto;
             };
 
-            Reset();
-            Screen.orientation = ScreenOrientation.AutoRotation;
-            Assert.AreEqual(1, m_EventCounter);
-            Assert.IsTrue(autoRotate);
-
-            Reset();
-            Screen.orientation = ScreenOrientation.Portrait;
-            Assert.AreEqual(1, m_EventCounter);
-            Assert.IsFalse(autoRotate);
+            // ScreenOrientation.Portrait is default
 
             Reset();
             Screen.orientation = ScreenOrientation.PortraitUpsideDown;
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(1, m_EventCounter);
-            Assert.IsFalse(autoRotate);
+
+            Reset();
+            Screen.orientation = ScreenOrientation.Portrait;
+            m_Simulation.ApplyChanges();
+            Assert.AreEqual(1, m_EventCounter);
 
             Reset();
             Screen.orientation = ScreenOrientation.LandscapeLeft;
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(1, m_EventCounter);
-            Assert.IsFalse(autoRotate);
 
             Reset();
             Screen.orientation = ScreenOrientation.LandscapeRight;
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(1, m_EventCounter);
-            Assert.IsFalse(autoRotate);
 
-            Reset();
-            Screen.orientation = ScreenOrientation.AutoRotation;
-            Assert.AreEqual(1, m_EventCounter);
-            Assert.IsTrue(autoRotate);
+            // Screen.orientation = ScreenOrientation.Autorotation does not fire an event, nor should it.
         }
     }
 }

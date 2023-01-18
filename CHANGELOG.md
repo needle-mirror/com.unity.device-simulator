@@ -3,6 +3,16 @@
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.1.0-preview] - 2023-01-18
+
+### Fixed
+- UUM-657 Canvas pixelRect lags a frame behind Screen.safeArea when switching device orientation.
+
+### Added
+- Apple iPhone 13 Pro
+- Apple iPhone 13 Pro Max
+- Samsung Galaxy Z Flip3
+
 ## [3.0.3-preview] - 2021-09-28
 
 ### Fixed

@@ -17,7 +17,7 @@ namespace UnityEditor.DeviceSimulation
         static readonly string s_VerticalClassName = "unity-two-pane-split-view--vertical";
         static readonly string s_HorizontalClassName = "unity-two-pane-split-view--horizontal";
 
-        public new class UxmlFactory : UxmlFactory<TwoPaneSplitView, UxmlTraits> {}
+        public new class UxmlFactory : UxmlFactory<TwoPaneSplitView, UxmlTraits> { }
 
         public new class UxmlTraits : VisualElement.UxmlTraits
         {

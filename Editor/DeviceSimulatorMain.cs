@@ -18,6 +18,7 @@ namespace UnityEditor.DeviceSimulation
 
         private bool m_SystemInfoSimulationEnabled;
         private bool m_ApplicationSimulationEnabled;
+        public ScreenSimulation ScreenSimulation => m_ScreenSimulation;
 
         public Vector2 targetSize => new Vector2(m_ScreenSimulation.currentResolution.width, m_ScreenSimulation.currentResolution.height);
 
@@ -54,7 +55,7 @@ namespace UnityEditor.DeviceSimulation
 
             InitDeviceIndex(serializedState);
             m_ApplicationSimulation = new ApplicationSimulation(serializedState);
-            m_DeviceSimulator = new DeviceSimulator {applicationSimulation = m_ApplicationSimulation};
+            m_DeviceSimulator = new DeviceSimulator { applicationSimulation = m_ApplicationSimulation };
             m_PluginController = new PluginController(serializedState, m_DeviceSimulator);
             m_TouchInput = new TouchEventManipulator(m_DeviceSimulator);
             m_UserInterface = new UserInterfaceController(this, rootVisualElement, serializedState, m_PluginController, m_TouchInput);
@@ -105,6 +106,7 @@ namespace UnityEditor.DeviceSimulation
             m_SystemInfoSimulation = new SystemInfoSimulation(currentDevice, playerSettings, whitelistedAssemblies);
             m_TouchInput.InitTouchInput(overlayTexture, currentDevice.deviceInfo, m_ScreenSimulation);
             m_UserInterface.OnSimulationStart(m_ScreenSimulation);
+            m_ScreenSimulation.ApplyChanges();
             m_ApplicationSimulation.OnSimulationStart(currentDevice.deviceInfo, whitelistedAssemblies);
 
             m_SystemInfoSimulationEnabled = projectSettings.SystemInfoSimulation;

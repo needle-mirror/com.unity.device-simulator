@@ -48,7 +48,7 @@ namespace UnityEditor.DeviceSimulation
             if (s_LastSettings != null)
                 return s_LastSettings;
 
-            DeviceSimulatorProjectSettings settings = ScriptableObject.CreateInstance<DeviceSimulatorProjectSettings>();;
+            DeviceSimulatorProjectSettings settings = ScriptableObject.CreateInstance<DeviceSimulatorProjectSettings>();
             if (File.Exists(k_SettingsPath))
             {
                 var settingsJson = File.ReadAllText(k_SettingsPath);

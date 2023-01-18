@@ -32,9 +32,11 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             foreach (var orientation in supportedOrientations)
             {
                 Screen.orientation = orientation;
+                m_Simulation.ApplyChanges();
                 Assert.AreEqual(orientation, Screen.orientation);
             }
             Screen.orientation = unsupportedOrientation;
+            m_Simulation.ApplyChanges();
             Assert.AreNotEqual(unsupportedOrientation, Screen.orientation);
         }
 
@@ -57,13 +59,16 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             Screen.autorotateToPortraitUpsideDown = true;
             Screen.autorotateToLandscapeLeft = true;
             Screen.autorotateToLandscapeRight = true;
+            m_Simulation.ApplyChanges();
 
             foreach (var orientation in supportedOrientations)
             {
                 m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[orientation];
+                m_Simulation.ApplyChanges();
                 Assert.AreEqual(orientation, Screen.orientation);
             }
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[unsupportedOrientation];
+            m_Simulation.ApplyChanges();
             Assert.AreNotEqual(unsupportedOrientation, Screen.orientation);
         }
     }

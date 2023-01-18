@@ -23,31 +23,41 @@ namespace Unity.DeviceSimulator.Editor.Tests.UI
         {
             yield return new DeviceViewMatrixCase
             {
-                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(), Rotation = 0, Scale = 1.0f,
+                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(),
+                Rotation = 0,
+                Scale = 1.0f,
                 InputPosition = new Vector2(200, 400),
                 ResultPosition = new Vector2(150, 350)
             };
             yield return new DeviceViewMatrixCase
             {
-                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(), Rotation = 90, Scale = 1.0f,
+                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(),
+                Rotation = 90,
+                Scale = 1.0f,
                 InputPosition = new Vector2(200, 400),
                 ResultPosition = new Vector2(350, 2165)
             };
             yield return new DeviceViewMatrixCase
             {
-                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(), Rotation = 180, Scale = 1.0f,
+                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(),
+                Rotation = 180,
+                Scale = 1.0f,
                 InputPosition = new Vector2(200, 400),
                 ResultPosition = new Vector2(930, 1965)
             };
             yield return new DeviceViewMatrixCase
             {
-                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(), Rotation = 270, Scale = 1.0f,
+                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(),
+                Rotation = 270,
+                Scale = 1.0f,
                 InputPosition = new Vector2(200, 400),
                 ResultPosition = new Vector2(730, 150)
             };
             yield return new DeviceViewMatrixCase
             {
-                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(), Rotation = 0, Scale = 0.2f,
+                DeviceInfo = DeviceInfoLibrary.GetGalaxy10e(),
+                Rotation = 0,
+                Scale = 0.2f,
                 InputPosition = new Vector2(200, 400),
                 ResultPosition = new Vector2(950, 1950)
             };

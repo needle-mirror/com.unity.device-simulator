@@ -31,7 +31,7 @@ namespace Unity.DeviceSimulator
         private List<IDeviceSimulatorExtension> m_Extensions = new List<IDeviceSimulatorExtension>();
         public List<IDeviceSimulatorExtension> Extensions => m_Extensions;
 
-        public  SimulatorExtensions()
+        public SimulatorExtensions()
         {
             foreach (var type in TypeCache.GetTypesDerivedFrom<IDeviceSimulatorExtension>())
             {

@@ -7,13 +7,24 @@ namespace UnityEditor.DeviceSimulation
 {
     internal class ScreenSimulation : ScreenShimBase
     {
+        // Reasonable maximum resolution, tested on an Android device and game crashes when set beyond
+        private const int k_MaxResolution = 8192;
+
+        private int m_RequestedWidth;
+        private int m_RequestedHeight;
+        private ScreenOrientation m_RequestedOrientation;
+        private bool m_RequestedFullScreen;
+        private bool m_RequestDefaultResolution;
+        private bool m_RequestInsetUpdate;
+
+        private SimulationPlayerSettings m_PlayerSettings;
         private DeviceInfo m_DeviceInfo;
         private ScreenData m_Screen;
 
         private bool m_AutoRotation;
         public bool AutoRotation => m_AutoRotation;
 
-        private ScreenOrientation m_RenderedOrientation = ScreenOrientation.Portrait;
+        private ScreenOrientation m_RenderedOrientation;
         private Dictionary<ScreenOrientation, bool> m_AllowedAutoRotation;
         private Dictionary<ScreenOrientation, OrientationData> m_SupportedOrientations;
 
@@ -66,7 +77,7 @@ namespace UnityEditor.DeviceSimulation
 
         public bool IsRenderingLandscape => SimulatorUtilities.IsLandscape(m_RenderedOrientation);
 
-        public event Action<bool> OnOrientationChanged;
+        public event Action OnOrientationChanged;
         public event Action OnAllowedOrientationChanged;
         public event Action<int, int> OnResolutionChanged;
         public event Action<bool> OnFullScreenChanged;
@@ -75,6 +86,7 @@ namespace UnityEditor.DeviceSimulation
 
         public ScreenSimulation(DeviceInfo device, SimulationPlayerSettings playerSettings)
         {
+            m_PlayerSettings = playerSettings;
             m_DeviceInfo = device;
             m_Screen = device.screens[0];
 
@@ -92,6 +104,7 @@ namespace UnityEditor.DeviceSimulation
 
             // Set the full screen mode.
             m_IsFullScreen = !m_DeviceInfo.IsAndroidDevice() || playerSettings.androidStartInFullscreen;
+            m_RequestedFullScreen = m_IsFullScreen;
 
             // Calculate the right orientation.
             var settingOrientation = SimulatorUtilities.ToScreenOrientation(playerSettings.defaultOrientation);
@@ -103,33 +116,17 @@ namespace UnityEditor.DeviceSimulation
             else if (m_SupportedOrientations.ContainsKey(settingOrientation))
             {
                 m_AutoRotation = false;
-                ForceNewOrientation(settingOrientation);
+                RequestOrientation(settingOrientation);
             }
             else
             {
                 // The real iPhone X responds to this absolute corner case by crashing, we will not do that.
                 m_AutoRotation = false;
-                ForceNewOrientation(m_SupportedOrientations.Keys.ToArray()[0]);
+                RequestOrientation(m_SupportedOrientations.Keys.ToArray()[0]);
             }
 
-            // Calculate the right resolution.
-            var initWidth = m_Screen.width;
-            var initHeight = m_Screen.height;
-            if (playerSettings.resolutionScalingMode == ResolutionScalingMode.FixedDpi && playerSettings.targetDpi < m_Screen.dpi)
-            {
-                m_DpiRatio = playerSettings.targetDpi / m_Screen.dpi;
-                initWidth = (int)(initWidth * m_DpiRatio);
-                initHeight = (int)(initHeight * m_DpiRatio);
-            }
-            m_CurrentWidth = IsRenderingLandscape ? initHeight : initWidth;
-            m_CurrentHeight = IsRenderingLandscape ? initWidth : initHeight;
-
-            if (!m_IsFullScreen)
-            {
-                CalculateScreenResolutionForScreenMode(out m_CurrentWidth, out m_CurrentHeight);
-                CalculateInsets();
-            }
-            CalculateSafeAreaAndCutouts();
+            m_RequestInsetUpdate = true;
+            m_RequestDefaultResolution = true;
 
             ShimManager.UseShim(this);
         }
@@ -140,37 +137,99 @@ namespace UnityEditor.DeviceSimulation
 
             if (m_DeviceOrientation != m_RenderedOrientation && m_SupportedOrientations.ContainsKey(m_DeviceOrientation) && m_AllowedAutoRotation[m_DeviceOrientation])
             {
-                ForceNewOrientation(m_DeviceOrientation);
-            }
-            else
-            {
-                OnOrientationChanged?.Invoke(m_AutoRotation);
+                RequestOrientation(m_DeviceOrientation);
             }
         }
 
-        private void ForceNewOrientation(ScreenOrientation orientation)
+        private void RequestOrientation(ScreenOrientation orientation)
         {
-            // Swap resolution Width and Height if changing from Portrait to Landscape or vice versa
-            if ((orientation == ScreenOrientation.Portrait || orientation == ScreenOrientation.PortraitUpsideDown) && IsRenderingLandscape ||
-                (orientation == ScreenOrientation.LandscapeLeft || orientation == ScreenOrientation.LandscapeRight) && !IsRenderingLandscape)
+            m_RequestedOrientation = orientation;
+        }
+
+        public void ApplyChanges()
+        {
+            var updateSafeArea = false;
+
+            var orientationEvent = false;
+            var resolutionEvent = false;
+            var fullScreenEvent = false;
+            var screenSpaceSafeAreaEvent = false;
+            var insetsEvent = false;
+
+            if (m_RequestedOrientation != m_RenderedOrientation)
             {
-                var temp = m_CurrentHeight;
-                m_CurrentHeight = m_CurrentWidth;
-                m_CurrentWidth = temp;
+                if (m_RequestedOrientation.IsLandscape() != m_RenderedOrientation.IsLandscape())
+                {
+                    // Swap resolution Width and Height if changing from Portrait to Landscape or vice versa
+                    if (m_WasResolutionSet)
+                        (m_RequestedHeight, m_RequestedWidth) = (m_RequestedWidth, m_RequestedHeight);
+                    else
+                        m_RequestDefaultResolution = true;
+                }
+
+                m_RenderedOrientation = m_RequestedOrientation;
+                orientationEvent = true;
+                m_RequestInsetUpdate = true;
+                updateSafeArea = true;
+            }
+
+            if (m_RequestedFullScreen != m_IsFullScreen)
+            {
+                m_IsFullScreen = m_RequestedFullScreen;
+                m_RequestInsetUpdate = true;
+
+                // We only change the resolution if we never set the resolution by calling Screen.SetResolution().
+                if (!m_WasResolutionSet)
+                {
+                    m_RequestDefaultResolution = true;
+                }
+
+                updateSafeArea = true;
+                fullScreenEvent = true;
+            }
+
+            if (m_RequestInsetUpdate)
+            {
+                CalculateInsets();
+                insetsEvent = true;
+            }
+
+            if ((m_RequestedWidth != m_CurrentWidth || m_RequestedHeight != m_CurrentHeight) && m_WasResolutionSet)
+            {
+                m_CurrentWidth = m_RequestedWidth;
+                m_CurrentHeight = m_RequestedHeight;
+                updateSafeArea = true;
+                resolutionEvent = true;
+            }
+            else if (m_RequestDefaultResolution)
+            {
+                CalculateResolutionWithInsets();
+                updateSafeArea = true;
+                resolutionEvent = true;
+            }
+
+            if (updateSafeArea)
+            {
+                CalculateSafeAreaAndCutouts();
+                screenSpaceSafeAreaEvent = true;
+            }
+
+            if (orientationEvent)
+                OnOrientationChanged?.Invoke();
+            if (resolutionEvent)
                 OnResolutionChanged?.Invoke(m_CurrentWidth, m_CurrentHeight);
-            }
-            m_RenderedOrientation = orientation;
-            OnOrientationChanged?.Invoke(m_AutoRotation);
+            if (fullScreenEvent)
+                OnFullScreenChanged?.Invoke(m_IsFullScreen);
+            if (screenSpaceSafeAreaEvent)
+                OnScreenSpaceSafeAreaChanged?.Invoke(ScreenSpaceSafeArea);
+            if (insetsEvent)
+                OnInsetsChanged?.Invoke(Insets);
 
-            // We only change the resolution if we never set the resolution by calling Screen.SetResolution().
-            if (!m_IsFullScreen && !m_WasResolutionSet)
-            {
-                CalculateScreenResolutionForScreenMode(out int tempWidth, out int tempHeight);
-                SetResolution(tempWidth, tempHeight);
-            }
-
-            CalculateInsets();
-            CalculateSafeAreaAndCutouts();
+            m_RequestDefaultResolution = false;
+            m_RequestedOrientation = m_RenderedOrientation;
+            m_RequestedHeight = m_CurrentHeight;
+            m_RequestedWidth = m_CurrentWidth;
+            m_RequestInsetUpdate = false;
         }
 
         private void CalculateSafeAreaAndCutouts()
@@ -218,7 +277,6 @@ namespace UnityEditor.DeviceSimulation
             }
 
             ScreenSpaceSafeArea = onScreenSafeArea;
-            OnScreenSpaceSafeAreaChanged?.Invoke(ScreenSpaceSafeArea);
 
             var screenWidthInOrientation = IsRenderingLandscape ? m_Screen.height : m_Screen.width;
             var screenHeightInOrientation = IsRenderingLandscape ? m_Screen.width : m_Screen.height;
@@ -306,7 +364,6 @@ namespace UnityEditor.DeviceSimulation
                 }
             }
             Insets = inset;
-            OnInsetsChanged?.Invoke(inset);
         }
 
         private void SetAutoRotationOrientation(ScreenOrientation orientation, bool value)
@@ -320,7 +377,7 @@ namespace UnityEditor.DeviceSimulation
             }
 
             // If the current auto rotation is disabled we need to rotate to another allowed orientation
-            if (!value && orientation == m_RenderedOrientation)
+            if (!value && orientation == m_RequestedOrientation)
             {
                 SetFirstAvailableAutoOrientation();
             }
@@ -338,25 +395,36 @@ namespace UnityEditor.DeviceSimulation
             {
                 if (m_AllowedAutoRotation[newOrientation])
                 {
-                    ForceNewOrientation(newOrientation);
+                    RequestOrientation(newOrientation);
+                    return;
                 }
             }
         }
 
         private void SetResolution(int width, int height)
         {
-            // For now limit width & height from 1 to 9999.
-            if (width < 1 || width > 9999 || height < 1 || height > 9999)
+            m_WasResolutionSet = true;
+
+            if (width > k_MaxResolution || height > k_MaxResolution || width < 0 || height < 0)
             {
-                Debug.LogError("Failed to change resolution. Make sure that both width and height are between 1 and 9999.");
+                Debug.LogError($"Failed to change resolution. Make sure that both width and height are at least 0 and less than {k_MaxResolution}.");
                 return;
             }
 
-            m_CurrentWidth = width;
-            m_CurrentHeight = height;
-            CalculateSafeAreaAndCutouts();
+            if (width == 0 && height == 0)
+            {
+                m_WasResolutionSet = false;
+                m_RequestDefaultResolution = true;
+                return;
+            }
 
-            OnResolutionChanged?.Invoke(m_CurrentWidth, m_CurrentHeight);
+            if (width == 0)
+                width = 1;
+            else if (height == 0)
+                height = 1;
+
+            m_RequestedWidth = width;
+            m_RequestedHeight = height;
         }
 
         private void CalculateScreenResolutionForScreenMode(out int width, out int height)
@@ -393,6 +461,24 @@ namespace UnityEditor.DeviceSimulation
                 width = scaledWidthInPortraitOrientation;
                 height = scaledHeightInPortraitOrientation;
             }
+        }
+
+        private void CalculateResolutionWithInsets()
+        {
+            var screenWidthInOrientation = IsRenderingLandscape ? m_Screen.height : m_Screen.width;
+            var screenHeightInOrientation = IsRenderingLandscape ? m_Screen.width : m_Screen.height;
+
+            var insetsInOrientation = InsetsInCurrentOrientation;
+
+            var widthInOrientation = screenWidthInOrientation - insetsInOrientation.x - insetsInOrientation.z;
+            var heightInOrientation = screenHeightInOrientation - insetsInOrientation.y - insetsInOrientation.w;
+
+            var dpiRatio = 1f;
+            if (m_PlayerSettings.resolutionScalingMode == ResolutionScalingMode.FixedDpi && m_PlayerSettings.targetDpi < m_Screen.dpi)
+                dpiRatio = m_PlayerSettings.targetDpi / m_Screen.dpi;
+
+            m_CurrentWidth = Mathf.RoundToInt(widthInOrientation * dpiRatio);
+            m_CurrentHeight = Mathf.RoundToInt(heightInOrientation * dpiRatio);
         }
 
         public void Enable()
@@ -434,7 +520,7 @@ namespace UnityEditor.DeviceSimulation
                 else if (m_SupportedOrientations.ContainsKey(value))
                 {
                     m_AutoRotation = false;
-                    ForceNewOrientation(value);
+                    RequestOrientation(value);
                 }
             }
         }
@@ -478,21 +564,7 @@ namespace UnityEditor.DeviceSimulation
                 if (!m_DeviceInfo.IsAndroidDevice() || m_IsFullScreen == value)
                     return;
 
-                m_IsFullScreen = value;
-                CalculateInsets();
-
-                // We only change the resolution if we never set the resolution by calling Screen.SetResolution().
-                if (!m_WasResolutionSet)
-                {
-                    CalculateScreenResolutionForScreenMode(out int tempWidth, out int tempHeight);
-                    SetResolution(tempWidth, tempHeight);
-                }
-                else
-                {
-                    CalculateSafeAreaAndCutouts();
-                }
-
-                OnFullScreenChanged?.Invoke(m_IsFullScreen);
+                m_RequestedFullScreen = value;
             }
         }
 

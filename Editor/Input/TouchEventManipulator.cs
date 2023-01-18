@@ -22,7 +22,7 @@ namespace UnityEditor.DeviceSimulation
 
         public TouchEventManipulator(DeviceSimulator deviceSimulator)
         {
-            activators.Add(new ManipulatorActivationFilter() {button = MouseButton.LeftMouse});
+            activators.Add(new ManipulatorActivationFilter() { button = MouseButton.LeftMouse });
 
             var playerSettings = PlayerSettings.GetSerializedObject();
 #if UNITY_2020_2_OR_NEWER

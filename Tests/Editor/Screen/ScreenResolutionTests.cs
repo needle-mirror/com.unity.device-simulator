@@ -24,6 +24,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
             m_Simulation = new ScreenSimulation(device, new SimulationPlayerSettings());
             Screen.orientation = initOrientation;
+            m_Simulation.ApplyChanges();
 
             m_Simulation.OnResolutionChanged += (width, height) =>
             {
@@ -33,6 +34,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             };
 
             Screen.SetResolution(changedWidth, changedHeight, true);
+            m_Simulation.ApplyChanges();
 
             Assert.AreEqual(1, eventCounter);
             Assert.AreEqual(changedWidth, eventWidth);
@@ -88,10 +90,12 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             };
 
             Screen.orientation = initOrientation;
-            Assert.AreEqual(initOrientation.IsLandscape() ? landscapeResolution : portraitResolution, new Vector2(width, height));
+            m_Simulation.ApplyChanges();
+            Assert.AreEqual(SimulatorUtilities.IsLandscape(initOrientation) ? landscapeResolution : portraitResolution, new Vector2(width, height));
 
             Screen.orientation = newOrientation;
-            Assert.AreEqual(newOrientation.IsLandscape() ? landscapeResolution : portraitResolution, new Vector2(width, height));
+            m_Simulation.ApplyChanges();
+            Assert.AreEqual(SimulatorUtilities.IsLandscape(newOrientation) ? landscapeResolution : portraitResolution, new Vector2(width, height));
         }
 
         [Test]
@@ -113,7 +117,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             var height = 0;
             var initResolution = new Vector2(newWidth, newHeight);
             var flippedResolution = new Vector2(newHeight, newWidth);
-            var isFlipped = initOrientation.IsLandscape() ^ newOrientation.IsLandscape();
+            var isFlipped = SimulatorUtilities.IsLandscape(initOrientation) ^ SimulatorUtilities.IsLandscape(newOrientation);
 
             var testDevice = DeviceInfoLibrary.GetDeviceWithSupportedOrientations(ScreenTestUtilities.ExplicitOrientations);
             m_Simulation = new ScreenSimulation(testDevice, new SimulationPlayerSettings());
@@ -124,10 +128,13 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             };
 
             Screen.orientation = initOrientation;
+            m_Simulation.ApplyChanges();
             Screen.SetResolution(newWidth, newHeight, true);
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(initResolution, new Vector2(width, height));
 
             Screen.orientation = newOrientation;
+            m_Simulation.ApplyChanges();
             Assert.AreEqual(isFlipped ? flippedResolution : initResolution, new Vector2(width, height));
         }
     }

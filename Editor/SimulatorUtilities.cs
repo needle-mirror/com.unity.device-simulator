@@ -11,7 +11,7 @@ namespace UnityEditor.DeviceSimulation
         FixedDpi = 1
     }
 
-    internal enum SimulationState{ Enabled, Disabled }
+    internal enum SimulationState { Enabled, Disabled }
 
     internal static class SimulatorUtilities
     {
@@ -55,7 +55,7 @@ namespace UnityEditor.DeviceSimulation
             return orientation;
         }
 
-        public static bool IsLandscape(ScreenOrientation orientation)
+        public static bool IsLandscape(this ScreenOrientation orientation)
         {
             if (orientation == ScreenOrientation.Landscape || orientation == ScreenOrientation.LandscapeLeft ||
                 orientation == ScreenOrientation.LandscapeRight)

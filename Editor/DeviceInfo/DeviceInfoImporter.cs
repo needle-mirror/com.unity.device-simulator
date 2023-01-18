@@ -114,7 +114,7 @@ namespace UnityEditor.DeviceSimulation
                                 errorList.Add($"Multiple [systemInfo -> graphicsDependentData] fields have the same GraphicsDeviceType {type}.");
                             else
                                 graphicsTypes.Add(type);
-                            graphicsTypeElements.Add(new GraphicsTypeElement {element = graphicsSystemInfo[i], type = type});
+                            graphicsTypeElements.Add(new GraphicsTypeElement { element = graphicsSystemInfo[i], type = type });
                         }
                     }
                 }

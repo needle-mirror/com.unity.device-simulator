@@ -51,10 +51,10 @@ namespace UnityEditor.DeviceSimulation
 
         public override bool isEditor => !ShouldShim();
         public override RuntimePlatform platform => ShouldShim() ? (m_DeviceInfo.IsiOSDevice() ? RuntimePlatform.IPhonePlayer : RuntimePlatform.Android) : base.platform;
-        public override bool isMobilePlatform => ShouldShim() ?  m_DeviceInfo.IsMobileDevice() : base.isMobilePlatform;
-        public override bool isConsolePlatform => ShouldShim() ?  m_DeviceInfo.IsConsoleDevice() : base.isConsolePlatform;
-        public override SystemLanguage systemLanguage => ShouldShim() ?  simulatedSystemLanguage : base.systemLanguage;
-        public override NetworkReachability internetReachability => ShouldShim() ?  simulatedInternetReachability : base.internetReachability;
+        public override bool isMobilePlatform => ShouldShim() ? m_DeviceInfo.IsMobileDevice() : base.isMobilePlatform;
+        public override bool isConsolePlatform => ShouldShim() ? m_DeviceInfo.IsConsoleDevice() : base.isConsolePlatform;
+        public override SystemLanguage systemLanguage => ShouldShim() ? simulatedSystemLanguage : base.systemLanguage;
+        public override NetworkReachability internetReachability => ShouldShim() ? simulatedInternetReachability : base.internetReachability;
 
         public void InvokeLowMemory()
         {

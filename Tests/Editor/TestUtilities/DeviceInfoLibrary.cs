@@ -85,7 +85,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.Utilities
 
             var device = new DeviceInfo()
             {
-                screens = new[] {screen}
+                screens = new[] { screen }
             };
             return device;
         }

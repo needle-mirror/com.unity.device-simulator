@@ -9,14 +9,14 @@ internal class DeviceOptionalFieldAvailability
 {
     private static IEnumerable GetSystemInfoDataFields()
     {
-        var mandatoryFields = new[] {"operatingSystem", "graphicsDependentData"};
+        var mandatoryFields = new[] { "operatingSystem", "graphicsDependentData" };
         var type = typeof(SystemInfoData);
         return type.GetFields().Where(field => !mandatoryFields.Contains(field.Name));
     }
 
     private static IEnumerable GetGraphicsSystemInfoDataFields()
     {
-        var mandatoryFields = new[] {"graphicsDeviceType"};
+        var mandatoryFields = new[] { "graphicsDeviceType" };
         var type = typeof(GraphicsSystemInfoData);
         return type.GetFields().Where(field => !mandatoryFields.Contains(field.Name));
     }

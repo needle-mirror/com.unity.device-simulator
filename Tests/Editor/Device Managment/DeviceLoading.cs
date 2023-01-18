@@ -37,13 +37,13 @@ namespace DeviceManagment
                     var textureImporter = AssetImporter.GetAtPath(filePath) as TextureImporter;
                     if (textureImporter != null)
                     {
-                        Assert.AreEqual(TextureImporterType.GUI, textureImporter.textureType, deviceAsset.deviceInfo.ToString()+" overlay texture texture type mismatch");
-                        Assert.AreEqual(TextureImporterNPOTScale.None, textureImporter.npotScale, deviceAsset.deviceInfo.ToString()+" overlay texture npot mismatch");
-                        Assert.AreEqual(TextureImporterCompression.Uncompressed, textureImporter.textureCompression, deviceAsset.deviceInfo.ToString()+" overlay texture compression mode mismatch");
-                        Assert.AreEqual(FilterMode.Trilinear, textureImporter.filterMode, deviceAsset.deviceInfo.ToString()+" overlay texture filter mode mismatch");
-                        Assert.AreEqual(8192, textureImporter.maxTextureSize, deviceAsset.deviceInfo.ToString()+" overlay texture size mismatch");
-                        Assert.IsTrue(textureImporter.isReadable, deviceAsset.deviceInfo.ToString()+": overlay texture needs to be readable");
-                        Assert.IsFalse(textureImporter.mipmapEnabled, deviceAsset.deviceInfo.ToString()+": overlay texture mipmap needs to be disabled");
+                        Assert.AreEqual(TextureImporterType.GUI, textureImporter.textureType, deviceAsset.deviceInfo.ToString() + " overlay texture texture type mismatch");
+                        Assert.AreEqual(TextureImporterNPOTScale.None, textureImporter.npotScale, deviceAsset.deviceInfo.ToString() + " overlay texture npot mismatch");
+                        Assert.AreEqual(TextureImporterCompression.Uncompressed, textureImporter.textureCompression, deviceAsset.deviceInfo.ToString() + " overlay texture compression mode mismatch");
+                        Assert.AreEqual(FilterMode.Trilinear, textureImporter.filterMode, deviceAsset.deviceInfo.ToString() + " overlay texture filter mode mismatch");
+                        Assert.AreEqual(8192, textureImporter.maxTextureSize, deviceAsset.deviceInfo.ToString() + " overlay texture size mismatch");
+                        Assert.IsTrue(textureImporter.isReadable, deviceAsset.deviceInfo.ToString() + ": overlay texture needs to be readable");
+                        Assert.IsFalse(textureImporter.mipmapEnabled, deviceAsset.deviceInfo.ToString() + ": overlay texture mipmap needs to be disabled");
                     }
                 }
             }

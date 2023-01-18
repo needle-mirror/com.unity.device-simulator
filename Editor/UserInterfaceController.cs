@@ -135,7 +135,8 @@ namespace UnityEditor.DeviceSimulation
 
             // Safe Area button set up
             m_HighlightSafeAreaToggle = rootVisualElement.Q<ToolbarToggle>("highlight-safe-area");
-            m_HighlightSafeAreaToggle.RegisterValueChangedCallback((evt) => {
+            m_HighlightSafeAreaToggle.RegisterValueChangedCallback((evt) =>
+            {
                 HighlightSafeArea = evt.newValue;
             });
             m_HighlightSafeArea = serializedState.highlightSafeAreaEnabled;
@@ -152,7 +153,7 @@ namespace UnityEditor.DeviceSimulation
             m_PreviewPanel = rootVisualElement.Q<VisualElement>("preview-panel");
             m_PreviewPanel.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
             m_ScrollView = rootVisualElement.Q<ScrollView>("preview-scroll-view");
-            m_DeviceView = new DeviceView(Quaternion.Euler(0, 0, Rotation), Scale / 100f) {ShowSafeArea = HighlightSafeArea};
+            m_DeviceView = new DeviceView(Quaternion.Euler(0, 0, Rotation), Scale / 100f) { ShowSafeArea = HighlightSafeArea };
             m_DeviceView.AddManipulator(touchEventManipulator);
             m_DeviceView.OnViewToScreenChanged += () => { touchEventManipulator.previewImageRendererSpaceToScreenSpace = m_DeviceView.ViewToScreen; };
             m_DeviceViewContainer = rootVisualElement.Q<VisualElement>("preview-container");
@@ -215,7 +216,7 @@ namespace UnityEditor.DeviceSimulation
             m_DeviceView.ScreenInsets = m_ScreenSimulation.Insets;
             m_DeviceView.SafeArea = m_ScreenSimulation.ScreenSpaceSafeArea;
 
-            m_ScreenSimulation.OnOrientationChanged += autoRotate => m_DeviceView.ScreenOrientation = m_ScreenSimulation.orientation;
+            m_ScreenSimulation.OnOrientationChanged += () => m_DeviceView.ScreenOrientation = m_ScreenSimulation.orientation;
             m_ScreenSimulation.OnInsetsChanged += insets => m_DeviceView.ScreenInsets = insets;
             m_ScreenSimulation.OnScreenSpaceSafeAreaChanged += safeArea => m_DeviceView.SafeArea = safeArea;
 

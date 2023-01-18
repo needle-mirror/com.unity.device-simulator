@@ -51,6 +51,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
             m_Simulation = new ScreenSimulation(device, playerSettings);
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[initOrientation];
+            m_Simulation.ApplyChanges();
 
             m_Simulation.OnResolutionChanged += (i, i1) => resolutionEventCounter++;
             m_Simulation.OnFullScreenChanged += b => fullScreenEventCounter++;
@@ -71,6 +72,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             Assert.IsTrue(Screen.fullScreen);
 
             m_Simulation.fullScreen = false;
+            m_Simulation.ApplyChanges();
             Assert.IsFalse(Screen.fullScreen);
 
             Assert.AreEqual(1, fullScreenEventCounter);
@@ -94,6 +96,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             Assert.AreEqual(cutouts.FirstOrDefault(), Screen.cutouts.FirstOrDefault());
 
             m_Simulation.fullScreen = true;
+            m_Simulation.ApplyChanges();
             Assert.IsTrue(Screen.fullScreen);
 
             Assert.AreEqual(1, fullScreenEventCounter);
@@ -104,6 +107,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             Assert.AreEqual(fullScreenSafeArea, Screen.safeArea);
             Assert.AreEqual(fullScreenResolution, Screen.currentResolution);
         }
+
 
         static object[] AndroidFullScreenCases =
         {
@@ -124,6 +128,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
             m_Simulation = new ScreenSimulation(DeviceInfoLibrary.GetIphoneXMax(), new SimulationPlayerSettings());
             m_Simulation.DeviceRotation = ScreenTestUtilities.OrientationRotation[ScreenOrientation.Portrait];
+            m_Simulation.ApplyChanges();
 
             m_Simulation.OnResolutionChanged += (i, i1) => resolutionEventCounter++;
             m_Simulation.OnFullScreenChanged += b => fullScreenEventCounter++;
@@ -131,9 +136,11 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
             m_Simulation.OnScreenSpaceSafeAreaChanged += rect => safeAreaEventCounter++;
 
             m_Simulation.fullScreen = true;
+            m_Simulation.ApplyChanges();
             Assert.IsTrue(Screen.fullScreen);
 
             m_Simulation.fullScreen = false;
+            m_Simulation.ApplyChanges();
             Assert.IsTrue(Screen.fullScreen);
 
             Assert.AreEqual(0, fullScreenEventCounter);
@@ -156,6 +163,7 @@ namespace Unity.DeviceSimulator.Editor.Tests.ScreenFunctionality
 
 
             m_Simulation.fullScreenMode = fullScreenMode;
+            m_Simulation.ApplyChanges();
             switch (fullScreenMode)
             {
                 case FullScreenMode.Windowed:

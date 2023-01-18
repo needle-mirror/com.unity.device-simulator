@@ -288,8 +288,8 @@ namespace UnityEditor.DeviceSimulation
             vertices[7] = new Vector3(SafeArea.x + scaledLineWidth, SafeArea.y + SafeArea.height - scaledLineWidth, Vertex.nearZ);
 
             m_SafeAreaMesh.vertices = vertices;
-            m_SafeAreaMesh.colors = new[] {m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor};
-            m_SafeAreaMesh.triangles = new[] {0, 4, 1, 1, 4, 5, 1, 5, 6, 1, 6, 2, 6, 7, 2, 7, 3, 2, 0, 3, 4, 3, 7, 4};
+            m_SafeAreaMesh.colors = new[] { m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor, m_SafeAreaColor };
+            m_SafeAreaMesh.triangles = new[] { 0, 4, 1, 1, 4, 5, 1, 5, 6, 1, 6, 2, 6, 7, 2, 7, 3, 2, 0, 3, 4, 3, 7, 4 };
         }
 
         private void CreateScreenMesh()
@@ -341,7 +341,7 @@ namespace UnityEditor.DeviceSimulation
 
             m_ScreenMesh.vertices = vertices;
             m_ScreenMesh.uv = uvs;
-            m_ScreenMesh.triangles = new[] {0, 1, 3, 1, 2, 3};
+            m_ScreenMesh.triangles = new[] { 0, 1, 3, 1, 2, 3 };
         }
 
         private void CreateOverlayMesh()
@@ -364,8 +364,8 @@ namespace UnityEditor.DeviceSimulation
             vertices[3] = new Vector3(0, height, Vertex.nearZ);
 
             m_OverlayMesh.vertices = vertices;
-            m_OverlayMesh.uv = new[] {new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0)};
-            m_OverlayMesh.triangles = new[] {0, 1, 3, 1, 2, 3};
+            m_OverlayMesh.uv = new[] { new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0), new Vector2(0, 0) };
+            m_OverlayMesh.triangles = new[] { 0, 1, 3, 1, 2, 3 };
         }
 
         private void CreateProceduralOverlayMesh()
@@ -381,7 +381,7 @@ namespace UnityEditor.DeviceSimulation
             var width = m_ScreenWidth + m_BorderSize.x + m_BorderSize.z;
             var height = m_ScreenHeight + m_BorderSize.y + m_BorderSize.w;
 
-            const float padding = 10;;
+            const float padding = 10;
 
             var vertices = new Vector3[8];
             vertices[0] = new Vector3(0, 0, Vertex.nearZ);
